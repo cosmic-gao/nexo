@@ -3,11 +3,15 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "scripts": {
+    "build": "tsup"
+  },
   "exports": {
-    "./vite": "./vite/index.ts",
-    "./webpack": "./webpack/index.ts"
+    "./vite": "./dist/vite/index.js",
+    "./webpack": "./dist/webpack/index.js"
   },
   "files": [
+    "dist",
     "vite",
     "webpack"
   ],
@@ -26,6 +30,7 @@
   "devDependencies": {
     "@types/node": "^22.9.0",
     "es-module-lexer": "^1.5.4",
+    "tsup": "^8.3.5",
     "typescript": "^5.9.3"
   }
 }
