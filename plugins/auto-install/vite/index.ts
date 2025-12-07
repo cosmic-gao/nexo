@@ -18,7 +18,6 @@ type PluginOptions = {
 
 export default function autoInstall(opts: PluginOptions = {}): Plugin {
   let rootDir = opts.root ? path.resolve(opts.root) : process.cwd();
-  let announced = false;
 
   const parseCache = new ImportCache<string[]>(opts.cacheTtl ?? 0);
 
@@ -46,6 +45,8 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
 
   /**
    * 分析源码并批量安装缺失依赖（含类型包）
+   * - 使用缓存避免重复解析
+   * - 已安装/正在安装的包会被跳过
    */
   const analyzeInstall = async (code: string, id: string) => {
     if (!isSupportedFile(id)) return;
@@ -123,8 +124,12 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       ).filter((t) => !resolverIsInstalled(t, rootDir, clean));
 
       if (uniqueTypes.length) {
-        await installTypes(uniqueTypes, rootDir).catch(() => { });
-        uniqueTypes.forEach((t) => installedTypes.add(t));
+        const installedOk = await installTypes(uniqueTypes, rootDir)
+          .then(() => true)
+          .catch(() => false);
+        if (installedOk) {
+          uniqueTypes.forEach((t) => installedTypes.add(t));
+        }
       }
     }
   };
@@ -136,9 +141,6 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
 
     configResolved(config) {
       rootDir = config.root ? path.resolve(config.root) : rootDir;
-      if (!announced) {
-        announced = true;
-      }
     },
 
     async transform(code, id) {

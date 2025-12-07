@@ -10,9 +10,8 @@ export async function installPackages(
   rootDir: string,
   isTsFile: boolean
 ): Promise<void> {
-  if (!pkgs.length) return;
-
-  const unique = Array.from(new Set(pkgs));
+  const unique = dedupe(pkgs);
+  if (!unique.length) return;
 
   await runPnpmAdd(unique, rootDir, false).catch(async () => {
     for (const pkg of unique) {
@@ -41,8 +40,8 @@ export async function installPackages(
 }
 
 export async function installTypes(pkgs: string[], rootDir: string): Promise<void> {
-  if (!pkgs.length) return;
-  const unique = Array.from(new Set(pkgs));
+  const unique = dedupe(pkgs);
+  if (!unique.length) return;
   await runPnpmAdd(unique, rootDir, true).catch(() => {});
 }
 
@@ -64,4 +63,8 @@ function runPnpmAdd(pkgs: string[], cwd: string, dev = false) {
 
     child.on("error", (err) => reject(err));
   });
+}
+
+function dedupe(list: string[]) {
+  return Array.from(new Set(list.filter(Boolean)));
 }

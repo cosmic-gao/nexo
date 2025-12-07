@@ -1,5 +1,6 @@
 import { init, parse } from "es-module-lexer";
 
+const initPromise = init;
 const staticImportRe = /import\s+(?:[^'"]*?\sfrom\s+)?['"]([^'"]+)['"]/g;
 const dynamicImportRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
 
@@ -10,25 +11,39 @@ const dynamicImportRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
  * @returns 去重后的 specifier 列表
  */
 export async function extractSpecifiers(code: string): Promise<string[]> {
-  await init;
+  await initPromise;
 
   const specs: string[] = [];
 
-  try {
-    const [imports] = parse(code);
-    for (const item of imports) {
-      const s = code.slice(item.s, item.e);
-      if (s) specs.push(s);
-    }
-  } catch {
-    for (const m of code.matchAll(staticImportRe)) {
-      if (m[1]) specs.push(m[1]);
-    }
-  }
+  const parsed = tryParseWithLexer(code);
+  if (parsed.length) specs.push(...parsed);
+  else specs.push(...fallbackParse(code));
 
   for (const d of extractDynamicImports(code)) specs.push(d);
 
   return Array.from(new Set(specs));
+}
+
+function tryParseWithLexer(code: string): string[] {
+  try {
+    const [imports] = parse(code);
+    const specs: string[] = [];
+    for (const item of imports) {
+      const s = code.slice(item.s, item.e);
+      if (s) specs.push(s);
+    }
+    return specs;
+  } catch {
+    return [];
+  }
+}
+
+function fallbackParse(code: string): string[] {
+  const specs: string[] = [];
+  for (const m of code.matchAll(staticImportRe)) {
+    if (m[1]) specs.push(m[1]);
+  }
+  return specs;
 }
 
 /**
