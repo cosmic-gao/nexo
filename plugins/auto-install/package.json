@@ -1,0 +1,31 @@
+{
+  "name": "@nexo/auto-install",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "exports": {
+    "./vite": "./vite/index.ts",
+    "./webpack": "./webpack/index.ts"
+  },
+  "files": [
+    "vite",
+    "webpack"
+  ],
+  "peerDependencies": {
+    "vite": "^7.2.6",
+    "webpack": "^5.91.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "es-module-lexer": "^1.5.4",
+    "typescript": "^5.9.3"
+  }
+}
