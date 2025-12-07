@@ -2,15 +2,20 @@
   "compilerOptions": {
     "target": "esnext",
     "module": "esnext",
-    "moduleResolution": "bundler",
+    "moduleResolution": "Node",
     "lib": ["esnext"],
+    "baseUrl": ".",
+    "paths": {
+      "@nexo/cli-core": ["../cli-core/src/index.ts"]
+    },
     "types": ["node"],
+    "typeRoots": ["../../node_modules/@types", "./node_modules/@types"],
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true
   },
-  "include": ["vite/**/*.ts", "webpack/**/*.ts"]
+  "include": ["src"]
 }
 

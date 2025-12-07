@@ -2,6 +2,7 @@ packages:
   - packages/*
   - template/*
   - plugins/*
+  - scaffolds/*
 
 ignoredBuiltDependencies:
   - esbuild

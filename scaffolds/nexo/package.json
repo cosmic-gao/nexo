@@ -1,0 +1,23 @@
+{
+  "name": "@nexo/nexo",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "bin": {
+    "nexo": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch --onSuccess \"node dist/index.js --help\""
+  },
+  "dependencies": {
+    "@nexo/cli-core": "workspace:*",
+    "@nexo/cli-commands": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.9.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.9.3"
+  }
+}
+
