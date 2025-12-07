@@ -123,7 +123,7 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       ).filter((t) => !resolverIsInstalled(t, rootDir));
 
       if (uniqueTypes.length) {
-        await installTypes(uniqueTypes, rootDir).catch(() => {});
+        await installTypes(uniqueTypes, rootDir).catch(() => { });
         uniqueTypes.forEach((t) => installedTypes.add(t));
       }
     }
@@ -142,13 +142,13 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
     },
 
     async transform(code, id) {
-      await analyzeInstall(code, id).catch(() => {});
+      await analyzeInstall(code, id).catch(() => { });
       return null;
     },
 
     async handleHotUpdate(ctx) {
       const code = await ctx.read();
-      await analyzeInstall(code, ctx.file).catch(() => {});
+      await analyzeInstall(code, ctx.file).catch(() => { });
     }
   };
 }
