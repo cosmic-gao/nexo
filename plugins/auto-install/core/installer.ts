@@ -4,8 +4,6 @@ import {
   isInstalled,
   loadPackageJson
 } from "./resolver";
-import { logInfo, logError } from "./logger";
-
 export async function installPackages(
   pkgs: string[],
   rootDir: string,
@@ -15,20 +13,11 @@ export async function installPackages(
 
   const unique = Array.from(new Set(pkgs));
 
-  try {
-    await runPnpmAdd(unique, rootDir, false);
-    logInfo("install", { packages: unique });
-  } catch (err) {
-    logError("install_failed", { packages: unique, message: String(err) });
+  await runPnpmAdd(unique, rootDir, false).catch(async () => {
     for (const pkg of unique) {
-      try {
-        await runPnpmAdd([pkg], rootDir, false);
-        logInfo("install", { packages: [pkg] });
-      } catch (e) {
-        logError("install_failed_single", { package: pkg, message: String(e) });
-      }
+      await runPnpmAdd([pkg], rootDir, false).catch(() => {});
     }
-  }
+  });
 
   if (!isTsFile) return;
 
@@ -39,7 +28,7 @@ export async function installPackages(
     if (!typesPkg) continue;
     if (isInstalled(typesPkg, rootDir)) continue;
 
-    const pkgJson = loadPackageJson(pkg, rootDir);
+    const pkgJson = loadPackageJson(pkg);
     if (pkgJson && (pkgJson.types || pkgJson.typings)) continue;
 
     typesToInstall.push(typesPkg);
@@ -53,20 +42,13 @@ export async function installPackages(
 export async function installTypes(pkgs: string[], rootDir: string): Promise<void> {
   if (!pkgs.length) return;
   const unique = Array.from(new Set(pkgs));
-  try {
-    await runPnpmAdd(unique, rootDir, true);
-    logInfo("install_types", { packages: unique });
-  } catch (e) {
-    logError("install_types_failed", { packages: unique, message: String(e) });
-  }
+  await runPnpmAdd(unique, rootDir, true).catch(() => {});
 }
 
 function runPnpmAdd(pkgs: string[], cwd: string, dev = false) {
   return new Promise<void>((resolve, reject) => {
     const args = ["add", ...pkgs];
     if (dev) args.push("-D");
-
-    logInfo("run_pnpm", { cmd: `pnpm ${args.join(" ")}`, cwd });
 
     const child = spawn("pnpm", args, {
       cwd,

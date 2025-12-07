@@ -8,10 +8,7 @@ import {
   installPackages,
   installTypes,
   getTypesPackageName,
-  loadPackageJson,
-  logInfo,
-  logWarn,
-  logError
+  loadPackageJson
 } from "../core";
 
 type PluginOptions = {
@@ -29,12 +26,28 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
   const installedTypes = new Set<string>();
   const installing = new Set<string>();
 
+  const getMissingTypes = (pkg: string): string | null => {
+    const typesPkg = getTypesPackageName(pkg);
+    if (!typesPkg) return null;
+    if (installedTypes.has(typesPkg)) return null;
+    if (resolverIsInstalled(typesPkg, rootDir)) {
+      installedTypes.add(typesPkg);
+      return null;
+    }
+    const pkgJson = loadPackageJson(pkg);
+    if (pkgJson && (pkgJson.types || pkgJson.typings)) return null;
+    return typesPkg;
+  };
+
   const isSupportedFile = (id: string) => {
     const clean = id.split("?", 1)[0];
     return /\.(mjs|cjs|js|ts|jsx|tsx)$/.test(clean) && !clean.includes("node_modules");
   };
 
-  async function analyzeAndInstall(code: string, id: string) {
+  /**
+   * 分析源码并批量安装缺失依赖（含类型包）
+   */
+  const analyzeInstall = async (code: string, id: string) => {
     if (!isSupportedFile(id)) return;
 
     const clean = id.split("?", 1)[0];
@@ -49,11 +62,12 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       try {
         specs = await extractSpecifiers(code);
       } catch (err) {
-        logWarn("parse_failed", { file: id, error: String(err) });
         specs = [];
       }
       parseCache.set(id, code, specs);
     }
+
+    if (specs.length === 0) return;
 
     // parse to package names, filter builtins/relative
     const pkgsNeeded: string[] = [];
@@ -67,7 +81,7 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       if (installed.has(pkg) || resolverIsInstalled(pkg, rootDir)) {
         installed.add(pkg);
         if (isTsFile) {
-          const t = computeMissingTypes(pkg);
+          const t = getMissingTypes(pkg);
           if (t) typesNeeded.push(t);
         }
         continue;
@@ -78,25 +92,29 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       }
     }
 
-    if (pkgsNeeded.length === 0) return;
+    // 如果无需安装主包且不是 TS 文件，可提前返回
+    if (!isTsFile && pkgsNeeded.length === 0) return;
 
     // mark installing
     for (const p of pkgsNeeded) installing.add(p);
 
-    // do batch install for this transform
+    let installSucceeded = true;
     try {
       await installPackages(pkgsNeeded, rootDir, isTsFile);
+    } catch {
+      installSucceeded = false;
+    } finally {
+      pkgsNeeded.forEach((p) => installing.delete(p));
+    }
+
+    if (installSucceeded) {
       for (const p of pkgsNeeded) {
         installed.add(p);
-        installing.delete(p);
         if (isTsFile) {
-          const t = computeMissingTypes(p);
+          const t = getMissingTypes(p);
           if (t) typesNeeded.push(t);
         }
       }
-    } catch (err) {
-      logError("batch_install_error", { packages: pkgsNeeded, error: String(err) });
-      for (const p of pkgsNeeded) installing.delete(p);
     }
 
     if (isTsFile) {
@@ -105,28 +123,11 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       ).filter((t) => !resolverIsInstalled(t, rootDir));
 
       if (uniqueTypes.length) {
-        try {
-          await installTypes(uniqueTypes, rootDir);
-          uniqueTypes.forEach((t) => installedTypes.add(t));
-        } catch (err) {
-          logError("install_types_error", { packages: uniqueTypes, error: String(err) });
-        }
+        await installTypes(uniqueTypes, rootDir).catch(() => {});
+        uniqueTypes.forEach((t) => installedTypes.add(t));
       }
     }
-  }
-
-  function computeMissingTypes(pkg: string): string | null {
-    const typesPkg = getTypesPackageName(pkg);
-    if (!typesPkg) return null;
-    if (installedTypes.has(typesPkg)) return null;
-    if (resolverIsInstalled(typesPkg, rootDir)) {
-      installedTypes.add(typesPkg);
-      return null;
-    }
-    const pkgJson = loadPackageJson(pkg, rootDir);
-    if (pkgJson && (pkgJson.types || pkgJson.typings)) return null;
-    return typesPkg;
-  }
+  };
 
   return {
     name: "nexo:auto-install",
@@ -136,27 +137,18 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
     configResolved(config) {
       rootDir = config.root ? path.resolve(config.root) : rootDir;
       if (!announced) {
-        logInfo("plugin_enabled", { root: rootDir });
         announced = true;
       }
     },
 
     async transform(code, id) {
-      try {
-        await analyzeAndInstall(code, id);
-      } catch (err) {
-        logWarn("transform_error", { file: id, error: String(err) });
-      }
+      await analyzeInstall(code, id).catch(() => {});
       return null;
     },
 
     async handleHotUpdate(ctx) {
-      try {
-        const code = await ctx.read();
-        await analyzeAndInstall(code, ctx.file);
-      } catch (err) {
-        logWarn("hot_update_error", { file: ctx.file, error: String(err) });
-      }
+      const code = await ctx.read();
+      await analyzeInstall(code, ctx.file).catch(() => {});
     }
   };
 }
