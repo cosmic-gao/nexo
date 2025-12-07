@@ -26,11 +26,11 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
   const installedTypes = new Set<string>();
   const installing = new Set<string>();
 
-  const getMissingTypes = (pkg: string): string | null => {
+  const getMissingTypes = (pkg: string, from?: string): string | null => {
     const typesPkg = getTypesPackageName(pkg);
     if (!typesPkg) return null;
     if (installedTypes.has(typesPkg)) return null;
-    if (resolverIsInstalled(typesPkg, rootDir)) {
+    if (resolverIsInstalled(typesPkg, rootDir, from)) {
       installedTypes.add(typesPkg);
       return null;
     }
@@ -78,10 +78,10 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       if (!pkg) continue;
       if (pkg.startsWith("node:")) continue;
 
-      if (installed.has(pkg) || resolverIsInstalled(pkg, rootDir)) {
+      if (installed.has(pkg) || resolverIsInstalled(pkg, rootDir, clean)) {
         installed.add(pkg);
         if (isTsFile) {
-          const t = getMissingTypes(pkg);
+          const t = getMissingTypes(pkg, clean);
           if (t) typesNeeded.push(t);
         }
         continue;
@@ -111,7 +111,7 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
       for (const p of pkgsNeeded) {
         installed.add(p);
         if (isTsFile) {
-          const t = getMissingTypes(p);
+          const t = getMissingTypes(p, clean);
           if (t) typesNeeded.push(t);
         }
       }
@@ -120,7 +120,7 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
     if (isTsFile) {
       const uniqueTypes = Array.from(
         new Set(typesNeeded.filter((t) => !installedTypes.has(t)))
-      ).filter((t) => !resolverIsInstalled(t, rootDir));
+      ).filter((t) => !resolverIsInstalled(t, rootDir, clean));
 
       if (uniqueTypes.length) {
         await installTypes(uniqueTypes, rootDir).catch(() => { });

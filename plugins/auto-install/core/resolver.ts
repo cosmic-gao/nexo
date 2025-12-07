@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { createRequire } from "node:module";
 
 const requireFromEsm = createRequire(import.meta.url);
@@ -16,21 +18,67 @@ export function isBuiltin(pkg: string): boolean {
 
 /**
  * 检查包是否已安装（带缓存，减少重复 resolve 开销）
+ * - 会同时尝试：来源文件所在目录、rootDir、cwd，兼容 workspace / 多层 node_modules
+ * - 缓存 key 带上来源目录，避免不同子包间的结果互相污染
  * @param pkg 包名，例如 lodash、@scope/pkg
- * @param rootDir 项目根路径，用于 resolve 路径查找
+ * @param rootDir 项目根路径，用于默认 resolve 路径
+ * @param from 可选，触发检查的文件路径，优先使用其所在目录作为 resolve 基准
  * @returns 是否已安装
  */
-export function isInstalled(pkg: string, rootDir: string): boolean {
-  const key = `${rootDir}::${pkg}`;
+export function isInstalled(pkg: string, rootDir: string, from?: string): boolean {
+  // 缓存键加入调用方路径，避免不同子包/工作区的结果互相污染
+  const resolveBase = from ? path.dirname(from) : rootDir;
+  const key = `${resolveBase}::${pkg}`;
   const cached = installCache.get(key);
   if (cached !== undefined) return cached;
+  const resolvePaths = Array.from(
+    new Set(
+      [resolveBase, rootDir, process.cwd()]
+        .filter(Boolean)
+        .map((p) => path.resolve(p as string))
+    )
+  );
 
   try {
-    requireFromEsm.resolve(pkg, { paths: [rootDir] });
+    requireFromEsm.resolve(pkg, { paths: resolvePaths });
     installCache.set(key, true);
     return true;
   } catch {
+    // @types/* 等纯类型包没有 JS 入口，require.resolve(pkg) 会失败；
+    // 回退：定位 package.json 并确认类型入口文件存在，再判定为已安装。
+    const pkgJsonPath = tryResolvePackageJson(pkg, resolvePaths);
+    if (pkgJsonPath && hasTypeEntry(pkgJsonPath)) {
+      installCache.set(key, true);
+      return true;
+    }
+
     installCache.set(key, false);
+    return false;
+  }
+}
+
+function tryResolvePackageJson(pkg: string, paths: string[]): string | null {
+  try {
+    return requireFromEsm.resolve(`${pkg}/package.json`, { paths });
+  } catch {
+    return null;
+  }
+}
+
+function hasTypeEntry(pkgJsonPath: string): boolean {
+  try {
+    const json = requireFromEsm(pkgJsonPath) as { types?: string; typings?: string };
+    const baseDir = path.dirname(pkgJsonPath);
+    const candidates = [
+      json.types,
+      json.typings,
+      "index.d.ts",
+      "index.d.mts",
+      "index.d.cts"
+    ].filter(Boolean) as string[];
+
+    return candidates.some((rel) => fs.existsSync(path.resolve(baseDir, rel)));
+  } catch {
     return false;
   }
 }

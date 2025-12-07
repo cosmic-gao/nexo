@@ -1,4 +1,4 @@
-import { hashString } from "./utils";
+import { sha1Hash } from "./utils";
 
 type CacheEntry<T> = {
   key: string;
@@ -63,8 +63,8 @@ export class ImportCache<T> {
   }
 
   private fingerprint(content: string) {
-    if (content.length <= FINGERPRINT_BYTES) return hashString(content);
-    return hashString(content.slice(0, FINGERPRINT_BYTES));
+    if (content.length <= FINGERPRINT_BYTES) return sha1Hash(content);
+    return sha1Hash(content.slice(0, FINGERPRINT_BYTES));
   }
 
   private purgeExpired() {
