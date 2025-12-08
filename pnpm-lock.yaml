@@ -8,143 +8,884 @@ importers:
 
   .: {}
 
-  templates/react:
+  components/accordion:
     dependencies:
-      '@hookform/resolvers':
-        specifier: ^5.2.2
-        version: 5.2.2(react-hook-form@7.68.0(react@19.2.1))
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-alert-dialog':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-aspect-ratio':
-        specifier: ^1.1.8
-        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-avatar':
-        specifier: ^1.1.11
-        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-checkbox':
-        specifier: ^1.3.3
-        version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-collapsible':
-        specifier: ^1.1.12
-        version: 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-context-menu':
-        specifier: ^2.2.16
-        version: 2.2.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-dialog':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-dropdown-menu':
-        specifier: ^2.1.16
-        version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-hover-card':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-label':
-        specifier: ^2.1.8
-        version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-menubar':
-        specifier: ^1.1.16
-        version: 1.1.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-navigation-menu':
-        specifier: ^1.2.14
-        version: 1.2.14(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-popover':
-        specifier: ^1.1.15
-        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-progress':
-        specifier: ^1.1.8
-        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-radio-group':
-        specifier: ^1.3.8
-        version: 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-scroll-area':
-        specifier: ^1.2.10
-        version: 1.2.10(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-select':
-        specifier: ^2.2.6
-        version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-separator':
-        specifier: ^1.1.8
-        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-slider':
-        specifier: ^1.3.6
-        version: 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-slot':
-        specifier: ^1.2.4
-        version: 1.2.4(@types/react@19.2.7)(react@19.2.1)
-      '@radix-ui/react-switch':
-        specifier: ^1.2.6
-        version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-tabs':
-        specifier: ^1.1.13
-        version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-toggle':
-        specifier: ^1.1.10
-        version: 1.1.10(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-toggle-group':
-        specifier: ^1.1.11
-        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@radix-ui/react-tooltip':
-        specifier: ^1.2.8
-        version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      class-variance-authority:
-        specifier: ^0.7.1
-        version: 0.7.1
-      clsx:
-        specifier: ^2.1.1
-        version: 2.1.1
-      cmdk:
-        specifier: ^1.1.1
-        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      date-fns:
-        specifier: ^4.1.0
-        version: 4.1.0
-      embla-carousel-react:
-        specifier: ^8.6.0
-        version: 8.6.0(react@19.2.1)
-      input-otp:
-        specifier: ^1.4.2
-        version: 1.4.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       lucide-react:
         specifier: ^0.556.0
         version: 0.556.0(react@19.2.1)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       react:
-        specifier: ^19.2.0
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/alert:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/alert-dialog:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-alert-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/aspect-ratio:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-aspect-ratio':
+        specifier: ^1.1.8
+        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/avatar:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-avatar':
+        specifier: ^1.1.11
+        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/badge:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/breadcrumb:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-slot':
+        specifier: ^1.2.4
+        version: 1.2.4(@types/react@19.2.7)(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/button:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-slot':
+        specifier: ^1.2.4
+        version: 1.2.4(@types/react@19.2.7)(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/button-group:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-toggle-group':
+        specifier: ^1.1.11
+        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/calendar:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
         version: 19.2.1
       react-day-picker:
         specifier: ^9.12.0
         version: 9.12.0(react@19.2.1)
-      react-dom:
-        specifier: ^19.2.0
-        version: 19.2.1(react@19.2.1)
-      react-hook-form:
-        specifier: ^7.68.0
-        version: 7.68.0(react@19.2.1)
-      react-resizable-panels:
-        specifier: ^3.0.6
-        version: 3.0.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+
+  components/card:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/carousel:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      embla-carousel-react:
+        specifier: ^8.6.0
+        version: 8.6.0(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/chart:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
       recharts:
-        specifier: 2.15.4
+        specifier: ^2.15.4
         version: 2.15.4(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      sonner:
-        specifier: ^2.0.7
-        version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      tailwind-merge:
-        specifier: ^3.4.0
-        version: 3.4.0
+
+  components/checkbox:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-checkbox':
+        specifier: ^1.3.3
+        version: 1.3.3(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/collapsible:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-collapsible':
+        specifier: ^1.1.12
+        version: 1.1.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/command:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      cmdk:
+        specifier: ^1.1.1
+        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/context-menu:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-context-menu':
+        specifier: ^2.2.16
+        version: 2.2.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/dialog:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/drawer:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+
+  components/dropdown-menu:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-dropdown-menu':
+        specifier: ^2.1.16
+        version: 2.1.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/empty:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/field:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/form:
+    dependencies:
+      '@hookform/resolvers':
+        specifier: ^5.2.2
+        version: 5.2.2(react-hook-form@7.68.0(react@19.2.1))
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-label':
+        specifier: ^2.1.8
+        version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.4
+        version: 1.2.4(@types/react@19.2.7)(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+      react-hook-form:
+        specifier: ^7.68.0
+        version: 7.68.0(react@19.2.1)
       zod:
         specifier: ^4.1.13
         version: 4.1.13
+
+  components/hover-card:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-hover-card':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/input:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/input-group:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/input-otp:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      input-otp:
+        specifier: ^1.4.2
+        version: 1.4.2(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/item:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/kbd:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/label:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-label':
+        specifier: ^2.1.8
+        version: 2.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/menubar:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-menubar':
+        specifier: ^1.1.16
+        version: 1.1.16(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/navigation-menu:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-navigation-menu':
+        specifier: ^1.2.14
+        version: 1.2.14(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/pagination:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/popover:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-popover':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/progress:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-progress':
+        specifier: ^1.1.8
+        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/radio-group:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-radio-group':
+        specifier: ^1.3.8
+        version: 1.3.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/resizable:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+      react-resizable-panels:
+        specifier: ^3.0.6
+        version: 3.0.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+
+  components/scroll-area:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-scroll-area':
+        specifier: ^1.2.10
+        version: 1.2.10(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/select:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-select':
+        specifier: ^2.2.6
+        version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/separator:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-separator':
+        specifier: ^1.1.8
+        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/sheet:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-dialog':
+        specifier: ^1.1.15
+        version: 1.1.15(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/sidebar:
+    dependencies:
+      '@nexo/button':
+        specifier: workspace:*
+        version: link:../button
+      '@nexo/input':
+        specifier: workspace:*
+        version: link:../input
+      '@nexo/separator':
+        specifier: workspace:*
+        version: link:../separator
+      '@nexo/sheet':
+        specifier: workspace:*
+        version: link:../sheet
+      '@nexo/skeleton':
+        specifier: workspace:*
+        version: link:../skeleton
+      '@nexo/tooltip':
+        specifier: workspace:*
+        version: link:../tooltip
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-slot':
+        specifier: ^1.2.4
+        version: 1.2.4(@types/react@19.2.7)(react@19.2.1)
+      lucide-react:
+        specifier: ^0.556.0
+        version: 0.556.0(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/skeleton:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/slider:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-slider':
+        specifier: ^1.3.6
+        version: 1.3.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/sonner:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      next-themes:
+        specifier: ^0.4.6
+        version: 0.4.6(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+      sonner:
+        specifier: ^2.0.7
+        version: 2.0.7(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+
+  components/spinner:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/switch:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-switch':
+        specifier: ^1.2.6
+        version: 1.2.6(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/table:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/tabs:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-tabs':
+        specifier: ^1.1.13
+        version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/textarea:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/toggle:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-toggle':
+        specifier: ^1.1.10
+        version: 1.1.10(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/toggle-group:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-toggle-group':
+        specifier: ^1.1.11
+        version: 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      class-variance-authority:
+        specifier: ^0.7.1
+        version: 0.7.1
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/tooltip:
+    dependencies:
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../utils
+      '@radix-ui/react-tooltip':
+        specifier: ^1.2.8
+        version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      react:
+        specifier: ^19.0.0
+        version: 19.2.1
+
+  components/utils:
+    dependencies:
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      tailwind-merge:
+        specifier: ^3.4.0
+        version: 3.4.0
+
+  templates/react:
+    dependencies:
+      '@nexo/accordion':
+        specifier: workspace:*
+        version: link:../../components/accordion
+      '@nexo/alert':
+        specifier: workspace:*
+        version: link:../../components/alert
+      '@nexo/alert-dialog':
+        specifier: workspace:*
+        version: link:../../components/alert-dialog
+      '@nexo/aspect-ratio':
+        specifier: workspace:*
+        version: link:../../components/aspect-ratio
+      '@nexo/avatar':
+        specifier: workspace:*
+        version: link:../../components/avatar
+      '@nexo/badge':
+        specifier: workspace:*
+        version: link:../../components/badge
+      '@nexo/breadcrumb':
+        specifier: workspace:*
+        version: link:../../components/breadcrumb
+      '@nexo/button':
+        specifier: workspace:*
+        version: link:../../components/button
+      '@nexo/button-group':
+        specifier: workspace:*
+        version: link:../../components/button-group
+      '@nexo/calendar':
+        specifier: workspace:*
+        version: link:../../components/calendar
+      '@nexo/card':
+        specifier: workspace:*
+        version: link:../../components/card
+      '@nexo/carousel':
+        specifier: workspace:*
+        version: link:../../components/carousel
+      '@nexo/chart':
+        specifier: workspace:*
+        version: link:../../components/chart
+      '@nexo/checkbox':
+        specifier: workspace:*
+        version: link:../../components/checkbox
+      '@nexo/collapsible':
+        specifier: workspace:*
+        version: link:../../components/collapsible
+      '@nexo/command':
+        specifier: workspace:*
+        version: link:../../components/command
+      '@nexo/context-menu':
+        specifier: workspace:*
+        version: link:../../components/context-menu
+      '@nexo/dialog':
+        specifier: workspace:*
+        version: link:../../components/dialog
+      '@nexo/drawer':
+        specifier: workspace:*
+        version: link:../../components/drawer
+      '@nexo/dropdown-menu':
+        specifier: workspace:*
+        version: link:../../components/dropdown-menu
+      '@nexo/empty':
+        specifier: workspace:*
+        version: link:../../components/empty
+      '@nexo/field':
+        specifier: workspace:*
+        version: link:../../components/field
+      '@nexo/form':
+        specifier: workspace:*
+        version: link:../../components/form
+      '@nexo/hover-card':
+        specifier: workspace:*
+        version: link:../../components/hover-card
+      '@nexo/input':
+        specifier: workspace:*
+        version: link:../../components/input
+      '@nexo/input-group':
+        specifier: workspace:*
+        version: link:../../components/input-group
+      '@nexo/input-otp':
+        specifier: workspace:*
+        version: link:../../components/input-otp
+      '@nexo/item':
+        specifier: workspace:*
+        version: link:../../components/item
+      '@nexo/kbd':
+        specifier: workspace:*
+        version: link:../../components/kbd
+      '@nexo/label':
+        specifier: workspace:*
+        version: link:../../components/label
+      '@nexo/menubar':
+        specifier: workspace:*
+        version: link:../../components/menubar
+      '@nexo/navigation-menu':
+        specifier: workspace:*
+        version: link:../../components/navigation-menu
+      '@nexo/pagination':
+        specifier: workspace:*
+        version: link:../../components/pagination
+      '@nexo/popover':
+        specifier: workspace:*
+        version: link:../../components/popover
+      '@nexo/progress':
+        specifier: workspace:*
+        version: link:../../components/progress
+      '@nexo/radio-group':
+        specifier: workspace:*
+        version: link:../../components/radio-group
+      '@nexo/resizable':
+        specifier: workspace:*
+        version: link:../../components/resizable
+      '@nexo/scroll-area':
+        specifier: workspace:*
+        version: link:../../components/scroll-area
+      '@nexo/select':
+        specifier: workspace:*
+        version: link:../../components/select
+      '@nexo/separator':
+        specifier: workspace:*
+        version: link:../../components/separator
+      '@nexo/sheet':
+        specifier: workspace:*
+        version: link:../../components/sheet
+      '@nexo/sidebar':
+        specifier: workspace:*
+        version: link:../../components/sidebar
+      '@nexo/skeleton':
+        specifier: workspace:*
+        version: link:../../components/skeleton
+      '@nexo/slider':
+        specifier: workspace:*
+        version: link:../../components/slider
+      '@nexo/sonner':
+        specifier: workspace:*
+        version: link:../../components/sonner
+      '@nexo/spinner':
+        specifier: workspace:*
+        version: link:../../components/spinner
+      '@nexo/switch':
+        specifier: workspace:*
+        version: link:../../components/switch
+      '@nexo/table':
+        specifier: workspace:*
+        version: link:../../components/table
+      '@nexo/tabs':
+        specifier: workspace:*
+        version: link:../../components/tabs
+      '@nexo/textarea':
+        specifier: workspace:*
+        version: link:../../components/textarea
+      '@nexo/toggle':
+        specifier: workspace:*
+        version: link:../../components/toggle
+      '@nexo/toggle-group':
+        specifier: workspace:*
+        version: link:../../components/toggle-group
+      '@nexo/tooltip':
+        specifier: workspace:*
+        version: link:../../components/tooltip
+      '@nexo/utils':
+        specifier: workspace:*
+        version: link:../../components/utils
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      react:
+        specifier: ^19.2.0
+        version: 19.2.1
+      react-dom:
+        specifier: ^19.2.0
+        version: 19.2.1(react@19.2.1)
+      tailwind-merge:
+        specifier: ^3.4.0
+        version: 3.4.0
     devDependencies:
       '@tailwindcss/vite':
         specifier: ^4.1.17

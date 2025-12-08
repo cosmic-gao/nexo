@@ -1,0 +1,19 @@
+{
+  "name": "@nexo/navigation-menu",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.tsx",
+  "types": "index.tsx",
+  "exports": {
+    ".": "./index.tsx"
+  },
+  "peerDependencies": {
+    "@nexo/utils": "workspace:*",
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-navigation-menu": "^1.2.14",
+    "class-variance-authority": "^0.7.1",
+    "lucide-react": "^0.556.0"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "name": "@nexo/aspect-ratio",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.tsx",
+  "types": "index.tsx",
+  "exports": {
+    ".": "./index.tsx"
+  },
+  "peerDependencies": {
+    "@nexo/utils": "workspace:*",
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "@radix-ui/react-aspect-ratio": "^1.1.8"
+  }
+}

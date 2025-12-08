@@ -1,0 +1,17 @@
+{
+  "name": "@nexo/input-otp",
+  "version": "0.0.0",
+  "type": "module",
+  "main": "index.tsx",
+  "types": "index.tsx",
+  "exports": {
+    ".": "./index.tsx"
+  },
+  "peerDependencies": {
+    "@nexo/utils": "workspace:*",
+    "react": "^19.0.0"
+  },
+  "dependencies": {
+    "input-otp": "^1.4.2"
+  }
+}
