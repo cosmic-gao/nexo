@@ -56,10 +56,8 @@ export default function autoInstall(opts: PluginOptions = {}): Plugin {
 
     // consult cache
     const cached = parseCache.get(id, code);
-    let specs: string[];
-    if (cached) {
-      specs = cached;
-    } else {
+    let specs = cached;
+    if (!specs) {
       try {
         specs = await extractSpecifiers(code);
       } catch (err) {

@@ -1,8 +1,10 @@
 import { init, parse } from "es-module-lexer";
 
+// es-module-lexer exports `init` as a Promise<void>
 const initPromise = init;
 const staticImportRe = /import\s+(?:[^'"]*?\sfrom\s+)?['"]([^'"]+)['"]/g;
 const dynamicImportRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
+const importHintRe = /\bimport\b|export\s+[^;]+?\sfrom\s+['"]|require\s*\(/;
 
 /**
  * 提取源码中的模块导入 specifier，去重后返回。
@@ -11,6 +13,9 @@ const dynamicImportRe = /import\(\s*['"]([^'"]+)['"]\s*\)/g;
  * @returns 去重后的 specifier 列表
  */
 export async function extractSpecifiers(code: string): Promise<string[]> {
+  // quick bail-out to avoid parser work for files without imports
+  if (!importHintRe.test(code)) return [];
+
   await initPromise;
 
   const specs: string[] = [];

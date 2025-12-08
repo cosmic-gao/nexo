@@ -6,6 +6,7 @@ const requireFromEsm = createRequire(import.meta.url);
 const typesCache = new Map<string, string | null>();
 const installCache = new Map<string, boolean>();
 const pkgJsonCache = new Map<string, unknown>();
+const resolvePathsCache = new Map<string, string[]>();
 
 /**
  * 判定是否为 node: 内置模块
@@ -26,18 +27,26 @@ export function isBuiltin(pkg: string): boolean {
  * @returns 是否已安装
  */
 export function isInstalled(pkg: string, rootDir: string, from?: string): boolean {
+  if (isBuiltin(pkg)) return true;
+
   // 缓存键加入调用方路径，避免不同子包/工作区的结果互相污染
   const resolveBase = from ? path.dirname(from) : rootDir;
   const key = `${resolveBase}::${pkg}`;
   const cached = installCache.get(key);
   if (cached !== undefined) return cached;
-  const resolvePaths = Array.from(
-    new Set(
-      [resolveBase, rootDir, process.cwd()]
-        .filter(Boolean)
-        .map((p) => path.resolve(p as string))
-    )
-  );
+
+  const resolveCacheKey = `${resolveBase}|${rootDir}|${process.cwd()}`;
+  let resolvePaths = resolvePathsCache.get(resolveCacheKey);
+  if (!resolvePaths) {
+    resolvePaths = Array.from(
+      new Set(
+        [resolveBase, rootDir, process.cwd()]
+          .filter(Boolean)
+          .map((p) => path.resolve(p as string))
+      )
+    );
+    resolvePathsCache.set(resolveCacheKey, resolvePaths);
+  }
 
   try {
     requireFromEsm.resolve(pkg, { paths: resolvePaths });
