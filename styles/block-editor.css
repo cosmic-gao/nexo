@@ -1,0 +1,456 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    background-color: #ffffff;
+    color: #37352f;
+    line-height: 1.5;
+}
+
+.editor-container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.editor-toolbar {
+    margin-bottom: 40px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e9e9e7;
+}
+
+.editor-toolbar h1 {
+    font-size: 32px;
+    font-weight: 700;
+    color: #37352f;
+}
+
+.block-editor {
+    min-height: 400px;
+    counter-reset: list-counter;
+}
+
+.block-wrapper {
+    position: relative;
+    margin: 2px 0;
+}
+
+.block-wrapper-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
+.block-wrapper:hover .block-drag-handle,
+.block-wrapper:hover .block-action-button {
+    opacity: 1;
+}
+
+.block-drag-handle {
+    opacity: 0;
+    cursor: grab;
+    color: #9b9a97;
+    font-size: 12px;
+    padding: 4px 2px;
+    user-select: none;
+    transition: opacity 0.2s;
+    flex-shrink: 0;
+    width: 20px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.block-drag-handle:active {
+    cursor: grabbing;
+}
+
+.block-action-button {
+    opacity: 0;
+    cursor: pointer;
+    color: #9b9a97;
+    font-size: 18px;
+    padding: 2px 4px;
+    user-select: none;
+    transition: opacity 0.2s, color 0.2s;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+    line-height: 1.2;
+}
+
+.block-action-button:hover {
+    color: #37352f;
+    background-color: #e9e9e7;
+    border-radius: 3px;
+}
+
+.block {
+    position: relative;
+    padding: 3px 2px;
+    border-radius: 3px;
+    transition: background-color 0.1s;
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+}
+
+.block.has-background {
+    padding: 8px 12px;
+    border-radius: 3px;
+}
+
+.block:hover {
+    background-color: #f7f6f3;
+}
+
+.block.focused {
+    background-color: #f7f6f3;
+}
+
+.block-content {
+    flex: 1;
+    outline: none;
+    min-height: 1.5em;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+}
+
+/* 富文本格式样式 */
+.block-content strong,
+.block-content b {
+    font-weight: 700;
+}
+
+.block-content em,
+.block-content i {
+    font-style: italic;
+}
+
+.block-content u {
+    text-decoration: underline;
+}
+
+.block-content s,
+.block-content strike {
+    text-decoration: line-through;
+}
+
+.block-content code {
+    background-color: #f1f1ef;
+    color: #e16259;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.9em;
+}
+
+.block-content a {
+    color: #0b70e1;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.block-content a:hover {
+    color: #0a5fc2;
+}
+
+.block-content.placeholder::before {
+    content: attr(data-placeholder);
+    color: #9b9a97;
+    pointer-events: none;
+}
+
+/* 段落 */
+.block-paragraph .block-content {
+    font-size: 16px;
+    line-height: 1.6;
+}
+
+/* 标题 */
+.block-heading1 .block-content {
+    font-size: 32px;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 4px 0;
+}
+
+.block-heading2 .block-content {
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin: 4px 0;
+}
+
+.block-heading3 .block-content {
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin: 4px 0;
+}
+
+/* 列表 */
+.block-list-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+}
+
+.list-bullet {
+    color: #9b9a97;
+    font-size: 18px;
+    line-height: 1.5;
+    user-select: none;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: center;
+}
+
+.list-number {
+    color: #9b9a97;
+    font-size: 16px;
+    line-height: 1.5;
+    user-select: none;
+    flex-shrink: 0;
+    width: 24px;
+    text-align: right;
+    padding-right: 4px;
+}
+
+.block-children {
+    margin-left: 24px;
+    margin-top: 2px;
+    counter-reset: list-counter;
+    flex-basis: 100%;
+    order: 10;
+}
+
+.block-numbered-list {
+    counter-increment: list-counter;
+}
+
+.block-numbered-list .list-number::before {
+    content: counter(list-counter) '.';
+}
+
+.block-children .block-wrapper {
+    margin-left: 0;
+}
+
+/* 待办事项 */
+.todo-checkbox {
+    margin-top: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.block-todo {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.block-todo .block-content {
+    flex: 1;
+}
+
+.block-todo.checked .block-content {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+/* 命令菜单 */
+.command-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #e9e9e7;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px;
+    min-width: 200px;
+    z-index: 1000;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.command-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+}
+
+.command-item:hover {
+    background-color: #f7f6f3;
+}
+
+.command-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+.command-label {
+    font-size: 14px;
+    color: #37352f;
+}
+
+/* 上下文菜单 */
+.context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #e9e9e7;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px;
+    min-width: 240px;
+    z-index: 1001;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background-color 0.1s;
+    position: relative;
+}
+
+.context-menu-item:hover {
+    background-color: #f7f6f3;
+}
+
+.context-menu-icon {
+    font-size: 16px;
+    width: 20px;
+    text-align: center;
+}
+
+.context-menu-label {
+    flex: 1;
+    font-size: 14px;
+    color: #37352f;
+}
+
+.context-menu-arrow {
+    color: #9b9a97;
+    font-size: 12px;
+}
+
+.context-menu-shortcut {
+    color: #9b9a97;
+    font-size: 12px;
+    margin-left: auto;
+}
+
+.context-menu-divider {
+    height: 1px;
+    background-color: #e9e9e7;
+    margin: 4px 0;
+}
+
+.color-menu {
+    position: absolute;
+    background: white;
+    border: 1px solid #e9e9e7;
+    border-radius: 4px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 8px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 4px;
+    z-index: 1002;
+}
+
+.color-menu-item {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.2s;
+}
+
+.color-menu-item:hover {
+    border-color: #37352f;
+}
+
+/* 格式化工具栏 */
+.format-toolbar {
+    position: fixed;
+    background: #37352f;
+    border-radius: 4px;
+    padding: 4px;
+    display: flex;
+    gap: 2px;
+    z-index: 1003;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.format-button {
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 6px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    transition: background-color 0.1s;
+}
+
+.format-button:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.format-button:active {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.format-toolbar-divider {
+    width: 1px;
+    height: 20px;
+    background-color: rgba(255, 255, 255, 0.3);
+    margin: 0 4px;
+}
+
+/* 拖拽状态 */
+.block-wrapper.dragging {
+    opacity: 0.5;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+    .editor-container {
+        padding: 20px 16px;
+    }
+
+    .editor-toolbar h1 {
+        font-size: 24px;
+    }
+
+    .block-heading1 .block-content {
+        font-size: 28px;
+    }
+
+    .block-heading2 .block-content {
+        font-size: 22px;
+    }
+
+    .block-heading3 .block-content {
+        font-size: 18px;
+    }
+}
+
