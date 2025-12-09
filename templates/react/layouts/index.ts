@@ -1,2 +1,0 @@
-export { Default } from './default'
-
