@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { TrendingUp, TrendingDown, Wallet, BarChart3, PieChart, ArrowRight } from 'lucide-react'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
@@ -187,11 +187,19 @@ export function Home() {
   const marketData = marketDataByTimeRange[marketRange] || marketDataByTimeRange.ALL
   const currentNews = newsItems[newsIndex]
 
+  // 自动轮播新闻
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNewsIndex((prev) => (prev + 1) % newsItems.length)
+    }, 4000)
+    return () => clearInterval(timer)
+  }, [])
+
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto space-y-6">
+      <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8 space-y-6">
         {/* 顶部统计卡片 */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {stats.map((stat) => {
             const Icon = stat.icon
             return (
@@ -255,9 +263,9 @@ export function Home() {
         </div>
 
         {/* 中间行：钱包余额、投资概览、新闻 */}
-        <div className="grid gap-6 lg:grid-cols-[1.3fr_1fr_1fr]">
+        <div className="grid gap-6 lg:grid-cols-[1.45fr_1.15fr_0.9fr] lg:items-stretch [@media(max-width:1400px)]:grid-cols-1">
           {/* 钱包余额 - 饼图 */}
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50 shadow-sm h-full flex flex-col">
             <CardHeader className="flex flex-row items-start justify-between gap-3">
               <CardTitle className="text-lg font-semibold">Wallet Balance</CardTitle>
               <div className="flex items-center gap-2 text-xs">
@@ -330,19 +338,19 @@ export function Home() {
                   </ChartContainer>
                 </div>
                 {/* 列表区域 */}
-                <div className="grid gap-3">
+                <div className="grid gap-2.5">
                   {walletData.map((item) => (
-                    <div key={item.name} className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-2">
+                    <div key={item.name} className="flex items-center justify-between rounded-lg border border-border/50 px-3 py-1.5">
                       <div className="flex items-center gap-2">
                         <div
                           className="h-3 w-3 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="text-sm font-medium">{item.name}</span>
+                        <span className="text-[13px] font-medium">{item.name}</span>
                       </div>
                       <div className="text-right">
-                        <div className="text-sm font-semibold">{item.amount}</div>
-                        <div className="text-xs text-muted-foreground">{item.usd}</div>
+                        <div className="text-[13px] font-semibold">{item.amount}</div>
+                        <div className="text-[12px] text-muted-foreground">{item.usd}</div>
                       </div>
                     </div>
                   ))}
@@ -352,17 +360,17 @@ export function Home() {
           </Card>
 
           {/* 投资概览 - 进度条 */}
-          <Card className="border-border/50 shadow-sm">
+          <Card className="border-border/50 shadow-sm h-full flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle className="text-lg font-semibold">Invested Overview</CardTitle>
               <select className="text-xs border rounded px-2 py-1 bg-card">
                 <option>May</option>
               </select>
             </CardHeader>
-            <CardContent>
-              <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:gap-8">
-                <div className="flex items-center justify-center">
-                  <div className="relative w-32 h-32">
+            <CardContent className="flex-1 flex flex-col">
+              <div className="flex flex-col gap-5 lg:grid lg:grid-cols-[1fr_minmax(220px,260px)] lg:gap-7 lg:items-stretch flex-1">
+                <div className="flex items-center justify-center lg:justify-start">
+                  <div className="relative w-30 h-30 lg:w-34 lg:h-34">
                   <svg className="transform -rotate-90" viewBox="0 0 100 100">
                     <circle
                       cx="50"
@@ -395,27 +403,27 @@ export function Home() {
                   </div>
                   </div>
                 </div>
-                <div className="flex-1 space-y-4">
+                <div className="space-y-2.5 lg:max-w-[260px] flex flex-col">
                   <div>
-                    <div className="text-sm text-muted-foreground mb-1">Invested Amount</div>
-                    <div className="text-2xl font-bold">$6134.39</div>
-                    <div className="text-sm text-green-600 dark:text-green-400 flex items-center gap-1 mt-1">
+                    <div className="text-[13px] text-muted-foreground mb-1">Invested Amount</div>
+                    <div className="text-xl font-bold">$6134.39</div>
+                    <div className="text-[13px] text-green-600 dark:text-green-400 flex items-center gap-1 mt-0.5">
                       <TrendingUp className="h-3 w-3" />
                       <span>+0.0012.23 (0.2%) ↑</span>
                     </div>
                   </div>
-                  <div className="space-y-2 pt-4 border-t">
-                    <div className="flex justify-between text-sm">
+                  <div className="space-y-1 pt-2.5 border-t">
+                    <div className="flex justify-between text-[13px]">
                       <span className="text-muted-foreground">INCOME</span>
                       <span className="font-semibold text-green-600 dark:text-green-400">$2632.46</span>
                     </div>
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-[13px]">
                       <span className="text-muted-foreground">EXPENSES</span>
                       <span className="font-semibold text-red-600 dark:text-red-400">-$924.38</span>
                     </div>
                   </div>
-                  <button className="w-full lg:w-auto px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
-                    View more <ArrowRight className="h-4 w-4" />
+                  <button className="mt-auto w-full lg:w-auto px-4 py-2 bg-primary text-white rounded-lg text-[13px] font-medium hover:bg-primary/90 transition-colors flex items-center justify-center gap-2">
+                    View more <ArrowRight className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -423,9 +431,9 @@ export function Home() {
           </Card>
 
           {/* 新闻卡片 */}
-          <Card className="border-border/50 shadow-sm p-0 overflow-hidden">
-            <div className="h-full bg-[#4b55c4] text-white p-6 flex flex-col gap-4 justify-center rounded-xl">
-              <div className="flex items-center gap-2">
+          <Card className="border-border/50 shadow-sm p-0 overflow-hidden h-full flex">
+            <div className="h-full flex-1 bg-[#4b55c4] text-white p-6 flex flex-col gap-4 justify-center rounded-xl items-start text-left lg:items-center lg:text-center">
+              <div className="flex items-center gap-2 lg:justify-center w-full">
                 <div className="h-8 w-8 rounded-lg bg-white/15 flex items-center justify-center text-sm font-bold">
                   {currentNews.tag}
                 </div>
@@ -434,10 +442,10 @@ export function Home() {
               <p className="text-sm text-white/80 leading-relaxed">
                 {currentNews.description}
               </p>
-              <button className="self-start px-4 py-2 bg-white text-[#4b55c4] rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors flex items-center gap-2">
+              <button className="self-start lg:self-center px-4 py-2 bg-white text-[#4b55c4] rounded-lg text-sm font-semibold hover:bg-white/90 transition-colors flex items-center gap-2">
                 {currentNews.cta} <ArrowRight className="h-4 w-4" />
               </button>
-              <div className="flex gap-1">
+              <div className="flex gap-1 lg:justify-center w-full">
                 {newsItems.map((_, idx) => (
                   <button
                     key={idx}

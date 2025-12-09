@@ -4,8 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build"
+    "dev": "nexo dev",
+    "build": "nexo build"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
@@ -56,6 +56,7 @@
     "zod": "^4.1.13"
   },
   "devDependencies": {
+    "nexo": "workspace:*",
     "@tailwindcss/typography": "^0.5.15",
     "@tailwindcss/vite": "^4.1.0",
     "@types/node": "^22.10.2",
@@ -65,7 +66,6 @@
     "tailwindcss": "^4.1.0",
     "tailwindcss-animate": "^1.0.7",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5.7.2",
-    "vite": "^7.0.5"
+    "typescript": "^5.7.2"
   }
 }
