@@ -4,8 +4,10 @@
  * 架构层次：
  * 1. 数据层（Block Model）
  * 2. 视图层（Block → Component 映射）
- * 3. 渲染层（DOM 渲染）
+ * 3. 渲染层（虚拟渲染引擎 - 类似 Notion，不使用 contentEditable）
  */
+
+import { VirtualRenderer } from './virtual-renderer.js';
 
 // ==================== 1. 数据层（Block Model） ====================
 
@@ -95,31 +97,29 @@ export class BlockComponentRegistry {
   }
 }
 
-// 默认组件实现
+// 默认组件实现 - 使用虚拟渲染器
 export class ParagraphComponent implements BlockComponent {
+  constructor(private virtualRenderer: VirtualRenderer) {}
+
   render(block: BlockData): HTMLElement {
     const element = document.createElement('div');
     element.className = 'block-node paragraph';
     element.dataset.blockId = block.id;
     
-    const content = document.createElement('div');
-    content.className = 'block-content';
-    content.contentEditable = 'true';
-    content.textContent = block.content;
-    
+    // 使用虚拟渲染器渲染内容（不使用 contentEditable）
+    const content = this.virtualRenderer.renderBlock(block.id, block.content);
     element.appendChild(content);
     return element;
   }
 
   update(element: HTMLElement, block: BlockData): void {
-    const content = element.querySelector('.block-content') as HTMLElement;
-    if (content && content.textContent !== block.content) {
-      content.textContent = block.content;
-    }
+    this.virtualRenderer.updateBlock(block.id, block.content);
   }
 }
 
 export class HeadingComponent implements BlockComponent {
+  constructor(private virtualRenderer: VirtualRenderer) {}
+
   render(block: BlockData): HTMLElement {
     const element = document.createElement('div');
     const level = block.props?.level || 1;
@@ -127,11 +127,8 @@ export class HeadingComponent implements BlockComponent {
     element.dataset.blockId = block.id;
     element.dataset.level = String(level);
     
-    const content = document.createElement('div');
-    content.className = 'block-content';
-    content.contentEditable = 'true';
-    content.textContent = block.content;
-    
+    // 使用虚拟渲染器渲染内容
+    const content = this.virtualRenderer.renderBlock(block.id, block.content);
     element.appendChild(content);
     return element;
   }
@@ -140,56 +137,46 @@ export class HeadingComponent implements BlockComponent {
     const level = block.props?.level || 1;
     element.dataset.level = String(level);
     
-    const content = element.querySelector('.block-content') as HTMLElement;
-    if (content && content.textContent !== block.content) {
-      content.textContent = block.content;
-    }
+    this.virtualRenderer.updateBlock(block.id, block.content);
   }
 }
 
 export class CodeComponent implements BlockComponent {
+  constructor(private virtualRenderer: VirtualRenderer) {}
+
   render(block: BlockData): HTMLElement {
     const element = document.createElement('div');
     element.className = 'block-node code';
     element.dataset.blockId = block.id;
     
-    const content = document.createElement('pre');
-    content.className = 'block-content';
-    content.contentEditable = 'true';
-    content.textContent = block.content;
-    
+    // 使用虚拟渲染器渲染内容
+    const content = this.virtualRenderer.renderBlock(block.id, block.content);
+    content.style.fontFamily = 'monospace';
     element.appendChild(content);
     return element;
   }
 
   update(element: HTMLElement, block: BlockData): void {
-    const content = element.querySelector('.block-content') as HTMLElement;
-    if (content && content.textContent !== block.content) {
-      content.textContent = block.content;
-    }
+    this.virtualRenderer.updateBlock(block.id, block.content);
   }
 }
 
 export class QuoteComponent implements BlockComponent {
+  constructor(private virtualRenderer: VirtualRenderer) {}
+
   render(block: BlockData): HTMLElement {
     const element = document.createElement('div');
     element.className = 'block-node quote';
     element.dataset.blockId = block.id;
     
-    const content = document.createElement('div');
-    content.className = 'block-content';
-    content.contentEditable = 'true';
-    content.textContent = block.content;
-    
+    // 使用虚拟渲染器渲染内容
+    const content = this.virtualRenderer.renderBlock(block.id, block.content);
     element.appendChild(content);
     return element;
   }
 
   update(element: HTMLElement, block: BlockData): void {
-    const content = element.querySelector('.block-content') as HTMLElement;
-    if (content && content.textContent !== block.content) {
-      content.textContent = block.content;
-    }
+    this.virtualRenderer.updateBlock(block.id, block.content);
   }
 }
 
@@ -199,10 +186,12 @@ export class Renderer {
   private container: HTMLElement;
   private componentRegistry: BlockComponentRegistry;
   private blockElements: Map<string, HTMLElement> = new Map();
+  private virtualRenderer: VirtualRenderer;
 
   constructor(container: HTMLElement, componentRegistry: BlockComponentRegistry) {
     this.container = container;
     this.componentRegistry = componentRegistry;
+    this.virtualRenderer = new VirtualRenderer(container);
     this.setupStyles();
   }
 
@@ -271,6 +260,9 @@ export class Renderer {
         width: 100%;
         min-height: 24px;
       }
+      .virtual-block-content {
+        position: relative;
+      }
     `;
     document.head.appendChild(style);
   }
@@ -312,6 +304,10 @@ export class Renderer {
   getBlockElement(blockId: string): HTMLElement | undefined {
     return this.blockElements.get(blockId);
   }
+
+  getVirtualRenderer(): VirtualRenderer {
+    return this.virtualRenderer;
+  }
 }
 
 // ==================== 主编辑器类 ====================
@@ -343,10 +339,11 @@ export class BlockEditor {
   }
 
   private registerDefaultComponents() {
-    this.componentRegistry.register('paragraph', new ParagraphComponent());
-    this.componentRegistry.register('heading', new HeadingComponent());
-    this.componentRegistry.register('code', new CodeComponent());
-    this.componentRegistry.register('quote', new QuoteComponent());
+    const virtualRenderer = this.renderer.getVirtualRenderer();
+    this.componentRegistry.register('paragraph', new ParagraphComponent(virtualRenderer));
+    this.componentRegistry.register('heading', new HeadingComponent(virtualRenderer));
+    this.componentRegistry.register('code', new CodeComponent(virtualRenderer));
+    this.componentRegistry.register('quote', new QuoteComponent(virtualRenderer));
   }
 
   private initialize() {
@@ -366,6 +363,12 @@ export class BlockEditor {
 
     this.database.setRootIds([block1.id, block2.id]);
     this.update();
+    
+    // 初始化后，设置第一个块的选择位置
+    setTimeout(() => {
+      const virtualRenderer = this.renderer.getVirtualRenderer();
+      virtualRenderer.setSelection(block1.id, block1.content.length);
+    }, 0);
   }
 
   private update() {
@@ -375,6 +378,9 @@ export class BlockEditor {
   }
 
   private setupEventListeners() {
+    const virtualRenderer = this.renderer.getVirtualRenderer();
+
+    // 点击选择块
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
       const blockElement = target.closest('.block-node') as HTMLElement;
@@ -386,80 +392,180 @@ export class BlockEditor {
             el.classList.remove('selected', 'editing');
           });
           blockElement.classList.add('selected', 'editing');
-        }
-      }
-    });
-
-    this.container.addEventListener('input', (e) => {
-      const target = e.target as HTMLElement;
-      const blockElement = target.closest('.block-node') as HTMLElement;
-      if (blockElement && target.classList.contains('block-content')) {
-        const blockId = blockElement.dataset.blockId;
-        if (blockId) {
-          const content = target.textContent || '';
-          this.database.update(blockId, { content });
-          this.renderer.updateBlock(this.database.get(blockId)!);
-        }
-      }
-    });
-
-    this.container.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        const target = e.target as HTMLElement;
-        const blockElement = target.closest('.block-node') as HTMLElement;
-        if (blockElement && target.classList.contains('block-content')) {
-          const blockId = blockElement.dataset.blockId;
-          if (blockId) {
-            const block = this.database.get(blockId);
-            if (block) {
-              const content = target.textContent || '';
-              const selection = window.getSelection();
-              const range = selection?.getRangeAt(0);
-              const offset = range?.startOffset || 0;
-              
-              const before = content.substring(0, offset);
-              const after = content.substring(offset);
-
-              this.database.update(blockId, { content: before });
-              const newBlock = this.database.create({
-                type: 'paragraph',
-                content: after,
-                children: [],
-              });
-
-              const rootIds = this.database.getRootIds();
-              const index = rootIds.indexOf(blockId);
-              if (index !== -1) {
-                rootIds.splice(index + 1, 0, newBlock.id);
-              } else {
-                rootIds.push(newBlock.id);
+          
+          // 设置选择位置（点击位置或文本末尾）
+          const contentElement = blockElement.querySelector('.virtual-block-content') as HTMLElement;
+          if (contentElement) {
+            const fragment = virtualRenderer.getFragment(blockId);
+            if (fragment) {
+              // 尝试获取点击位置的偏移量
+              const offset = fragment.getOffsetFromPoint(e.clientX, e.clientY);
+              virtualRenderer.setSelection(blockId, offset);
+            } else {
+              // 如果没有 fragment，设置到文本末尾
+              const block = this.database.get(blockId);
+              if (block) {
+                virtualRenderer.setSelection(blockId, block.content.length);
               }
-              this.database.setRootIds(rootIds);
-
-              this.update();
-              
-              // 聚焦到新块
-              setTimeout(() => {
-                const newElement = this.renderer.getBlockElement(newBlock.id);
-                if (newElement) {
-                  const contentEl = newElement.querySelector('.block-content') as HTMLElement;
-                  if (contentEl) {
-                    contentEl.focus();
-                    const range = document.createRange();
-                    range.setStart(contentEl.firstChild || contentEl, 0);
-                    range.collapse(true);
-                    const sel = window.getSelection();
-                    sel?.removeAllRanges();
-                    sel?.addRange(range);
-                  }
-                }
-              }, 0);
             }
           }
         }
       }
     });
+
+    // 设置输入处理器（使用虚拟渲染器的输入拦截器）
+    virtualRenderer.setupInputHandler(
+      (blockId, text, offset) => {
+        // 处理文本输入
+        const block = this.database.get(blockId);
+        if (block) {
+          const fragment = virtualRenderer.getFragment(blockId);
+          if (fragment) {
+            fragment.insertText(offset, text);
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+            this.renderer.updateBlock(this.database.get(blockId)!);
+            
+            // 更新选择位置
+            const newOffset = offset + text.length;
+            virtualRenderer.setSelection(blockId, newOffset);
+          }
+        }
+      },
+      (blockId, e, offset) => {
+        // 处理键盘事件
+        const block = this.database.get(blockId);
+        if (!block) return;
+
+        const fragment = virtualRenderer.getFragment(blockId);
+        if (!fragment) return;
+
+        const text = fragment.getText();
+
+        if (e.key === 'Backspace') {
+          if (offset > 0) {
+            fragment.deleteText(offset - 1, offset);
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+            this.renderer.updateBlock(this.database.get(blockId)!);
+            virtualRenderer.setSelection(blockId, offset - 1);
+          } else if (offset === 0 && text.length === 0) {
+            // 空块时删除整个块
+            const rootIds = this.database.getRootIds();
+            const index = rootIds.indexOf(blockId);
+            if (index > 0) {
+              this.database.delete(blockId);
+              rootIds.splice(index, 1);
+              this.database.setRootIds(rootIds);
+              this.update();
+              // 聚焦到前一个块
+              const prevBlockId = rootIds[index - 1];
+              if (prevBlockId) {
+                const prevBlock = this.database.get(prevBlockId);
+                if (prevBlock) {
+                  const prevFragment = virtualRenderer.getFragment(prevBlockId);
+                  if (prevFragment) {
+                    const prevText = prevFragment.getText();
+                    virtualRenderer.setSelection(prevBlockId, prevText.length);
+                  }
+                }
+              }
+            }
+          }
+        } else if (e.key === 'Delete') {
+          if (offset < text.length) {
+            fragment.deleteText(offset, offset + 1);
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+            this.renderer.updateBlock(this.database.get(blockId)!);
+            virtualRenderer.setSelection(blockId, offset);
+          }
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          
+          if (e.shiftKey) {
+            // Shift+Enter: 在块内插入换行符
+            fragment.insertText(offset, '\n');
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+            this.renderer.updateBlock(this.database.get(blockId)!);
+            virtualRenderer.setSelection(blockId, offset + 1);
+          } else {
+            // Enter: 在块内插入换行符（普通换行）
+            fragment.insertText(offset, '\n');
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+            this.renderer.updateBlock(this.database.get(blockId)!);
+            virtualRenderer.setSelection(blockId, offset + 1);
+          }
+        } else if (e.key === 'ArrowLeft') {
+          if (offset > 0) {
+            virtualRenderer.setSelection(blockId, offset - 1);
+          } else {
+            // 移动到前一个块
+            const rootIds = this.database.getRootIds();
+            const index = rootIds.indexOf(blockId);
+            if (index > 0) {
+              const prevBlockId = rootIds[index - 1];
+              const prevBlock = this.database.get(prevBlockId);
+              if (prevBlock) {
+                const prevFragment = virtualRenderer.getFragment(prevBlockId);
+                if (prevFragment) {
+                  const prevText = prevFragment.getText();
+                  virtualRenderer.setSelection(prevBlockId, prevText.length);
+                }
+              }
+            }
+          }
+        } else if (e.key === 'ArrowRight') {
+          if (offset < text.length) {
+            virtualRenderer.setSelection(blockId, offset + 1);
+          } else {
+            // 移动到下一个块
+            const rootIds = this.database.getRootIds();
+            const index = rootIds.indexOf(blockId);
+            if (index < rootIds.length - 1) {
+              const nextBlockId = rootIds[index + 1];
+              virtualRenderer.setSelection(nextBlockId, 0);
+            }
+          }
+        } else if (e.key === 'ArrowUp') {
+          // 移动到上一行（简化实现：移动到前一个块）
+          const rootIds = this.database.getRootIds();
+          const index = rootIds.indexOf(blockId);
+          if (index > 0) {
+            const prevBlockId = rootIds[index - 1];
+            const prevBlock = this.database.get(prevBlockId);
+            if (prevBlock) {
+              const prevFragment = virtualRenderer.getFragment(prevBlockId);
+              if (prevFragment) {
+                const prevText = prevFragment.getText();
+                const targetOffset = Math.min(offset, prevText.length);
+                virtualRenderer.setSelection(prevBlockId, targetOffset);
+              }
+            }
+          }
+        } else if (e.key === 'ArrowDown') {
+          // 移动到下一行（简化实现：移动到下一个块）
+          const rootIds = this.database.getRootIds();
+          const index = rootIds.indexOf(blockId);
+          if (index < rootIds.length - 1) {
+            const nextBlockId = rootIds[index + 1];
+            const nextBlock = this.database.get(nextBlockId);
+            if (nextBlock) {
+              const nextFragment = virtualRenderer.getFragment(nextBlockId);
+              if (nextFragment) {
+                const nextText = nextFragment.getText();
+                const targetOffset = Math.min(offset, nextText.length);
+                virtualRenderer.setSelection(nextBlockId, targetOffset);
+              }
+            }
+          }
+        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+          // 可打印字符（由输入拦截器处理，这里不需要）
+        }
+      }
+    );
   }
 
   // 公共 API

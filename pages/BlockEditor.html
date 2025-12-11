@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>最小化块编辑器示例</title>
+    <title>虚拟 DOM 块编辑器示例</title>
     <style>
         body {
             margin: 0;
@@ -43,19 +43,135 @@
             border-radius: 3px;
             font-family: monospace;
         }
+
+        .controls {
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 16px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .controls button {
+            margin: 4px;
+            padding: 8px 16px;
+            border: 1px solid #17b3a3;
+            background: white;
+            color: #17b3a3;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .controls button:hover {
+            background: #17b3a3;
+            color: white;
+        }
     </style>
 </head>
 
 <body>
-  
+    <div class="info">
+        <h3>🚀 虚拟 DOM 版本编辑器</h3>
+        <p>这个编辑器使用虚拟 DOM 系统，提供更好的性能和可维护性。</p>
+        <p><strong>核心特性：</strong></p>
+        <ul>
+            <li>✅ <strong>虚拟 DOM 自动优化</strong>：只更新变化的部分，不重新渲染整个列表</li>
+            <li>✅ <strong>组件化架构</strong>：每个块类型都是独立组件，易于扩展</li>
+            <li>✅ <strong>声明式编程</strong>：使用 h() 函数声明式描述 UI，代码更清晰</li>
+            <li>✅ <strong>类型安全</strong>：完整的 TypeScript 类型支持</li>
+            <li>✅ <strong>性能优化</strong>：使用 diff 算法最小化 DOM 操作</li>
+        </ul>
+        <p><strong>学习要点：</strong></p>
+        <ul>
+            <li>查看 <code>app/virtual-dom.ts</code> 了解虚拟 DOM 核心实现</li>
+            <li>查看 <code>app/vdom-renderer.ts</code> 了解如何应用到块编辑器</li>
+            <li>查看 <code>app/vdom-block-editor-example.ts</code> 了解完整使用方式</li>
+        </ul>
+    </div>
+
+    <div class="controls">
+        <h4>操作面板</h4>
+        <button onclick="addParagraph()">添加段落</button>
+        <button onclick="addHeading()">添加标题</button>
+        <button onclick="addCode()">添加代码块</button>
+        <button onclick="addQuote()">添加引用</button>
+        <button onclick="updateFirstBlock()">更新第一个块</button>
+        <button onclick="deleteLastBlock()">删除最后一个块</button>
+    </div>
+
     <div id="editor"></div>
     <script type="module">
-        import { createBlockEditor } from '../app/block-editor.ts';
+        import { createVDOMBlockEditor } from '../app/vdom-block-editor-example.ts';
+        
+        // 创建编辑器实例
+        let editor;
         
         window.addEventListener('DOMContentLoaded', () => {
-            const editor = createBlockEditor('editor');
-            console.log('块编辑器已初始化', editor);
+            editor = createVDOMBlockEditor('editor');
+            console.log('虚拟 DOM 块编辑器已初始化', editor);
+            
+            // 将编辑器暴露到全局，方便控制台操作
+            window.editor = editor;
         });
+
+        // 操作函数
+        function addParagraph() {
+            if (editor) {
+                editor.insertBlock('paragraph', '这是一个新段落，由虚拟 DOM 渲染。');
+            }
+        }
+
+        function addHeading() {
+            if (editor) {
+                const block = editor.insertBlock('heading', '这是一个新标题');
+                // 更新标题级别
+                if (block) {
+                    editor.updateBlock(block.id, { props: { level: 2 } });
+                }
+            }
+        }
+
+        function addCode() {
+            if (editor) {
+                editor.insertBlock('code', 'const hello = "Virtual DOM";\nconsole.log(hello);');
+            }
+        }
+
+        function addQuote() {
+            if (editor) {
+                editor.insertBlock('quote', '这是一段引用文字，展示虚拟 DOM 的渲染能力。');
+            }
+        }
+
+        function updateFirstBlock() {
+            if (editor) {
+                const blocks = editor.getDatabase().getAllBlocks();
+                if (blocks.length > 0) {
+                    editor.updateBlock(blocks[0].id, { 
+                        content: '✅ 内容已更新！虚拟 DOM 自动优化了这次更新，只更新了变化的文本，没有重新渲染整个块。' 
+                    });
+                }
+            }
+        }
+
+        function deleteLastBlock() {
+            if (editor) {
+                const blocks = editor.getDatabase().getAllBlocks();
+                if (blocks.length > 0) {
+                    editor.deleteBlock(blocks[blocks.length - 1].id);
+                }
+            }
+        }
+
+        // 暴露到全局
+        window.addParagraph = addParagraph;
+        window.addHeading = addHeading;
+        window.addCode = addCode;
+        window.addQuote = addQuote;
+        window.updateFirstBlock = updateFirstBlock;
+        window.deleteLastBlock = deleteLastBlock;
     </script>
 </body>
 
