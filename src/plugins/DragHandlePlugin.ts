@@ -213,38 +213,36 @@ export class DragHandlePlugin implements Plugin {
     const blocks = container.querySelectorAll('.nexo-block');
 
     let closestBlock: HTMLElement | null = null;
-    let insertPosition: 'before' | 'after' = 'after';
+    let insertPosition = 'after' as 'before' | 'after';
     let minDistance = Infinity;
 
     blocks.forEach(block => {
-      const blockId = (block as HTMLElement).dataset.blockId;
+      const el = block as HTMLElement;
+      const blockId = el.dataset.blockId;
       if (blockId === this.dragSourceId) return;
 
-      const rect = block.getBoundingClientRect();
+      const rect = el.getBoundingClientRect();
       const centerY = rect.top + rect.height / 2;
       const distance = Math.abs(e.clientY - centerY);
 
       if (distance < minDistance) {
         minDistance = distance;
-        closestBlock = block as HTMLElement;
+        closestBlock = el;
         insertPosition = e.clientY < centerY ? 'before' : 'after';
       }
     });
 
     if (closestBlock) {
-      const rect = closestBlock.getBoundingClientRect();
+      const rect = (closestBlock as HTMLElement).getBoundingClientRect();
 
       this.dropIndicator.style.display = 'block';
       this.dropIndicator.style.left = `${rect.left}px`;
       this.dropIndicator.style.width = `${rect.width}px`;
+      this.dropIndicator.style.top = insertPosition === 'before' 
+        ? `${rect.top - 2}px` 
+        : `${rect.bottom - 1}px`;
 
-      if (insertPosition === 'before') {
-        this.dropIndicator.style.top = `${rect.top - 2}px`;
-      } else {
-        this.dropIndicator.style.top = `${rect.bottom - 1}px`;
-      }
-
-      (this.dropIndicator as any)._targetId = closestBlock.dataset.blockId;
+      (this.dropIndicator as any)._targetId = (closestBlock as HTMLElement).dataset.blockId;
       (this.dropIndicator as any)._position = insertPosition;
     } else {
       this.dropIndicator.style.display = 'none';
