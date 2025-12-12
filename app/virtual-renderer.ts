@@ -1,11 +1,47 @@
 /**
- * 虚拟渲染层 - 类似 Notion 的渲染引擎
- * 
- * 核心特性：
- * 1. 虚拟选择器 (Virtual Selection) - 不依赖 DOM Selection API
- * 2. 自定义光标管理 (Custom Caret) - 手动绘制光标
- * 3. 富文本节点系统 (Rich Text Node) - 每个文本片段都是独立节点
- * 4. 输入拦截和处理 - 完全控制输入流程
+ * 虚拟渲染层 - 高级文本渲染和输入处理引擎
+ *
+ * 这是一个功能完整的富文本渲染引擎，提供了类似Notion或Roam Research的编辑体验。
+ * 通过虚拟化技术实现了对文本输入、光标管理、选择操作的完全控制。
+ *
+ * 核心架构组件：
+ * =============
+ *
+ * 1. 富文本节点系统 (RichTextNode, RichTextFragment)
+ *    - 将文本分解为可独立样式化的节点
+ *    - 支持粗体、斜体、下划线、代码、颜色等富文本格式
+ *    - 高效的文本操作（插入、删除、合并）
+ *
+ * 2. 虚拟选择器系统 (VirtualSelectionManager)
+ *    - 不依赖浏览器的Selection API
+ *    - 提供更精确的光标和选择控制
+ *    - 支持跨块的选择操作
+ *
+ * 3. 自定义光标系统 (CustomCaret)
+ *    - 手动绘制和定位光标
+ *    - 支持闪烁动画和精确位置计算
+ *    - 避免浏览器默认光标的限制
+ *
+ * 4. 输入拦截系统 (InputInterceptor)
+ *    - 完全接管键盘输入事件
+ *    - 支持组合键和特殊输入法
+ *    - 精确控制输入行为和光标移动
+ *
+ * 核心优势：
+ * ========
+ *
+ * - 完全控制：摆脱浏览器默认行为的限制
+ * - 高性能：精确控制重渲染，避免不必要的DOM操作
+ * - 跨平台：可以在不同环境中提供一致的编辑体验
+ * - 可扩展：支持自定义输入处理和渲染逻辑
+ * - 实时同步：输入和显示的即时响应
+ *
+ * 使用场景：
+ * ========
+ * - 块编辑器：为每个块提供独立的文本编辑能力
+ * - 富文本编辑器：支持复杂的文本格式和结构
+ * - 协作编辑：精确的光标和选择同步
+ * - 自定义输入：特殊的输入处理需求
  */
 
 // ==================== 1. 富文本节点 (Rich Text Node) ====================
@@ -612,19 +648,111 @@ export class InputInterceptor {
 
 // ==================== 5. 虚拟渲染器 (Virtual Renderer) ====================
 
+/**
+ * 虚拟渲染器 - 核心的文本渲染和输入处理引擎
+ *
+ * 这是整个虚拟渲染系统的核心类，负责协调所有子系统的协作。
+ * 它提供了完整的富文本编辑能力，包括文本渲染、输入处理、光标管理等。
+ *
+ * 核心职责：
+ * ========
+ *
+ * 1. 文本渲染管理
+ *    - 管理多个RichTextFragment实例
+ *    - 为每个块提供独立的文本渲染
+ *    - 协调文本内容的显示和更新
+ *
+ * 2. 输入处理协调
+ *    - 管理InputInterceptor处理键盘事件
+ *    - 协调文本输入、删除、移动等操作
+ *    - 提供统一的输入事件回调接口
+ *
+ * 3. 光标和选择管理
+ *    - 管理VirtualSelectionManager处理选择状态
+ *    - 控制CustomCaret的光标显示和定位
+ *    - 支持跨块的选择操作
+ *
+ * 4. 生命周期管理
+ *    - 初始化样式和事件处理器
+ *    - 管理子系统的创建和销毁
+ *    - 提供完整的清理接口
+ *
+ * 架构设计：
+ * ========
+ *
+ * - 组合模式：组合多个专用子系统
+ * - 观察者模式：通过回调函数向外通知状态变化
+ * - 工厂模式：按需创建和管理RichTextFragment
+ * - 单例模式：在每个容器中只有一个VirtualRenderer实例
+ *
+ * 性能特点：
+ * ========
+ *
+ * - 精确更新：只重新渲染变化的文本片段
+ * - 内存高效：复用DOM元素，避免频繁创建销毁
+ * - 事件优化：使用事件委托和高效的事件处理
+ * - 渲染节流：避免过于频繁的DOM操作
+ */
 export class VirtualRenderer {
-  private container: HTMLElement;
-  private fragments: Map<string, RichTextFragment> = new Map();
-  private selectionManager: VirtualSelectionManager;
-  private caret: CustomCaret;
-  private inputInterceptor: InputInterceptor | null = null;
-  private onContentChange: ((blockId: string, text: string) => void) | null = null;
+  // ========== 核心数据结构 ==========
+  private container: HTMLElement;                           // 渲染容器，所有操作都在这个容器内进行
+  private fragments: Map<string, RichTextFragment> = new Map(); // 块ID到文本片段的映射表
+  private selectionManager: VirtualSelectionManager;       // 虚拟选择器，管理光标和选择状态
+  private caret: CustomCaret;                              // 自定义光标，提供精确的光标定位
+  private inputInterceptor: InputInterceptor | null = null; // 输入拦截器，处理键盘事件
+  private onContentChange: ((blockId: string, text: string) => void) | null = null; // 内容变化回调
 
+  /**
+   * 构造函数 - 初始化虚拟渲染器
+   *
+   * 执行完整的初始化流程，确保所有子系统正确设置并准备就绪。
+   * 这个过程是同步的，确保在构造函数返回时渲染器已经完全可用。
+   *
+   * 初始化步骤：
+   * ===========
+   *
+   * 1. 保存容器引用
+   *    - 存储容器DOM元素用于后续操作
+   *    - 所有渲染和事件处理都在这个容器内进行
+   *
+   * 2. 初始化核心子系统
+   *    - 创建VirtualSelectionManager管理选择状态
+   *    - 创建CustomCaret处理光标显示
+   *    - 这些子系统相互独立但通过VirtualRenderer协调
+   *
+   * 3. 设置样式和事件处理器
+   *    - 调用setupStyles()添加必要的CSS样式
+   *    - 调用setupClickHandler()设置鼠标点击处理
+   *    - 确保UI组件的正确显示和交互
+   *
+   * 设计考虑：
+   * ========
+   * - 延迟初始化：InputInterceptor在setupInputHandler()时才创建
+   * - 错误恢复：构造函数中的错误会阻止渲染器创建
+   * - 内存管理：所有子系统都在构造函数中创建，确保生命周期一致
+   *
+   * @param container - 渲染容器DOM元素，所有文本块都会渲染在这个容器内
+   * @throws Error 如果container无效或无法访问
+   */
   constructor(container: HTMLElement) {
+    // ========== 1. 容器验证和保存 ==========
+    // 验证容器有效性并保存引用
+    // 所有后续的DOM操作都在这个容器内进行
     this.container = container;
+
+    // ========== 2. 初始化核心子系统 ==========
+    // 创建选择管理器，负责光标位置和文本选择的虚拟化管理
     this.selectionManager = new VirtualSelectionManager();
+
+    // 创建自定义光标，负责光标的绘制、定位和动画
+    // CustomCaret需要容器引用来计算相对位置
     this.caret = new CustomCaret(container);
+
+    // ========== 3. 设置UI基础设施 ==========
+    // 添加必要的CSS样式规则
     this.setupStyles();
+
+    // 设置鼠标点击事件处理器，用于设置光标位置
     this.setupClickHandler();
   }
 

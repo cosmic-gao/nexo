@@ -367,116 +367,180 @@ export class SimpleBlockRenderer {
   }
 
   /**
-   * 渲染块列表
+   * 渲染块列表到容器中
    *
-   * 直接创建DOM元素并渲染到容器中。
+   * 这个方法是渲染器的核心，负责将块数据转换为DOM元素并显示在页面上。
+   * 采用直接DOM操作的方式，性能优于虚拟DOM方案。
    *
-   * @param blocks - 块数据列表
+   * 渲染流程：
+   * 1. 保存当前块列表状态
+   * 2. 清空容器，准备重新渲染
+   * 3. 创建根容器元素
+   * 4. 为每个块创建对应的DOM元素并添加到根容器
+   * 5. 将根容器添加到主容器中
+   * 6. 同步虚拟渲染器，为每个块设置文本处理和光标管理
+   * 7. 更新块元素映射表，用于后续查找和操作
+   *
+   * @param blocks - 要渲染的块数据列表，按照显示顺序排列
    */
   render(blocks: BlockData[]) {
+    // 保存当前渲染状态，用于后续的增量更新
     this.currentBlocks = blocks;
 
-    // 清空容器
+    // 清空容器，为全新渲染做准备
+    // 注意：这里使用innerHTML=''而不是removeChild，因为更高效
     this.container.innerHTML = '';
 
-    // 创建根容器
+    // 创建根容器，统一管理所有块元素的样式和布局
     const rootContainer = document.createElement('div');
     rootContainer.className = 'block-editor-container';
 
-    // 为每个块创建DOM元素并添加到容器
+    // 为每个块创建对应的DOM元素
+    // 这里调用createBlockElement方法，根据块类型创建不同的组件
     blocks.forEach(block => {
       const blockElement = this.createBlockElement(block);
       rootContainer.appendChild(blockElement);
     });
 
-    // 添加到主容器
+    // 将完整的块树添加到主容器中
     this.container.appendChild(rootContainer);
 
-    // 同步虚拟渲染器的文本（用于输入处理和光标管理）
+    // 同步虚拟渲染器
+    // 使用requestAnimationFrame确保DOM已经完全渲染完毕
+    // 为每个块设置虚拟渲染器的fragment，用于文本输入和光标管理
     requestAnimationFrame(() => {
       blocks.forEach(block => {
         this.syncVirtualRenderer(block);
       });
     });
 
-    // 更新块元素映射
+    // 更新内部映射表，建立块ID到DOM元素的快速查找关系
     this.updateBlockElementsMap();
   }
 
   /**
-   * 创建块的DOM元素
+   * 创建单个块的DOM元素
    *
-   * 根据块的类型，从注册表中获取对应的组件实例，
-   * 然后调用组件的render方法创建DOM元素。
+   * 这是组件化和多态性的关键方法。根据块的类型动态创建对应的组件实例，
+   * 然后调用组件的render方法生成DOM元素。
    *
-   * @param block - 块数据
-   * @returns 块的DOM元素
+   * 组件查找逻辑：
+   * 1. 根据block.type从组件注册表中查找对应的组件类
+   * 2. 如果找到对应的组件，使用该组件渲染
+   * 3. 如果未找到，尝试使用默认的paragraph组件
+   * 4. 如果连默认组件都没有，创建一个简单的fallback元素
+   *
+   * 这种设计允许：
+   * - 动态注册新的块类型
+   * - 为不同类型的块提供不同的渲染逻辑
+   * - 优雅的降级处理（fallback）
+   *
+   * @param block - 块数据，包含类型、内容、属性等信息
+   * @returns 渲染后的DOM元素，包含完整的块结构
+   * @private
    */
   private createBlockElement(block: BlockData): HTMLElement {
-    // 从注册表获取组件实例
+    // 从组件注册表中查找对应的组件实例
+    // 注册表维护着块类型到组件类的映射关系
     const component = this.componentRegistry.get(block.type);
 
     if (!component) {
-      // 如果未找到组件，使用默认的段落组件
+      // 未找到指定类型的组件，尝试使用默认的段落组件
+      // 这提供了向后兼容性和优雅降级
       const defaultComponent = this.componentRegistry.get('paragraph');
       if (defaultComponent) {
         return defaultComponent.render(block);
       }
-      // 如果连默认组件都没有，创建一个简单的 div
+
+      // 连默认组件都没有的情况（极少发生）
+      // 创建一个简单的文本元素作为最后的fallback
+      console.warn(`未找到块类型 "${block.type}" 的组件，使用默认文本显示`);
       const element = document.createElement('div');
       element.setAttribute('data-block-id', block.id);
-      element.textContent = block.content;
+      element.className = 'block-node fallback';
+      element.textContent = block.content || '未支持的块类型';
       return element;
     }
 
-    // 调用组件的render方法创建DOM元素
+    // 调用组件的render方法，传入块数据，获取渲染后的DOM元素
+    // 这里体现了组件化的核心思想：数据驱动的声明式渲染
     return component.render(block);
   }
 
   /**
-   * 同步虚拟渲染器
+   * 同步虚拟渲染器与DOM元素
    *
-   * 为块的内容元素设置虚拟渲染器的fragment。
+   * 这是连接直接DOM渲染和虚拟文本渲染的关键桥梁方法。
+   * 虚拟渲染器负责处理复杂的文本输入、光标管理等功能，
+   * 而直接DOM渲染器负责块的整体结构。
    *
-   * @param block - 块数据
+   * 同步逻辑：
+   * 1. 查找当前块的内容容器元素
+   * 2. 检查虚拟渲染器是否已经有该块的fragment
+   * 3. 如果没有fragment，创建新的fragment并替换占位符
+   * 4. 如果已有fragment，更新其文本内容并重新渲染
+   *
+   * 这种设计的好处：
+   * - 分离关注点：结构渲染和文本处理独立
+   * - 性能优化：只在必要时更新文本内容
+   * - 灵活性：可以为不同块类型定制不同的文本处理逻辑
+   *
+   * @param block - 要同步的块数据
+   * @private
    */
   private syncVirtualRenderer(block: BlockData) {
+    // 查找当前块的内容容器
+    // 使用data-block-id属性确保找到正确的元素
     const contentElement = this.container.querySelector(
       `.virtual-block-content[data-block-id="${block.id}"]`
     ) as HTMLElement;
 
-    if (contentElement) {
-      // 获取或创建虚拟渲染器的fragment
-      let fragment = this.virtualRenderer.getFragment(block.id);
-      if (!fragment) {
-        // 创建fragment
-        const virtualContentElement = this.virtualRenderer.renderBlock(block.id, block.content);
-        const virtualFragment = virtualContentElement.querySelector('.rich-text-fragment');
+    if (!contentElement) {
+      console.warn(`未找到块 ${block.id} 的内容容器，跳过虚拟渲染器同步`);
+      return;
+    }
 
-        // 查找占位符fragment
-        const placeholderFragment = contentElement.querySelector('.rich-text-fragment[data-placeholder="true"]');
+    // 检查虚拟渲染器是否已经为这个块创建了fragment
+    let fragment = this.virtualRenderer.getFragment(block.id);
 
-        // 将虚拟渲染器的fragment替换占位符
-        if (placeholderFragment && virtualFragment) {
-          contentElement.replaceChild(virtualFragment, placeholderFragment);
-        } else if (!placeholderFragment && virtualFragment) {
-          contentElement.appendChild(virtualFragment);
-        }
+    if (!fragment) {
+      // 首次渲染：创建新的fragment
+      // 虚拟渲染器会创建完整的文本处理结构
+      const virtualContentElement = this.virtualRenderer.renderBlock(block.id, block.content);
+      const virtualFragment = virtualContentElement.querySelector('.rich-text-fragment');
+
+      // 查找组件创建的占位符元素
+      const placeholderFragment = contentElement.querySelector('.rich-text-fragment[data-placeholder="true"]');
+
+      // 将虚拟渲染器创建的真实fragment替换占位符
+      if (placeholderFragment && virtualFragment) {
+        contentElement.replaceChild(virtualFragment, placeholderFragment);
+      } else if (!placeholderFragment && virtualFragment) {
+        // 如果组件没有创建占位符，直接添加fragment
+        contentElement.appendChild(virtualFragment);
       } else {
-        // fragment已存在，更新文本
-        fragment.setText(block.content);
-        const fragmentElement = fragment.render();
+        console.warn(`块 ${block.id} 的fragment同步失败`);
+      }
+    } else {
+      // 更新现有fragment：这种情况发生在块内容更新时
+      // 更新虚拟渲染器的文本内容
+      fragment.setText(block.content);
 
-        // 查找现有的fragment
-        const existingFragment = contentElement.querySelector('.rich-text-fragment');
+      // 重新渲染fragment以反映文本变化
+      const fragmentElement = fragment.render();
 
-        if (existingFragment && fragmentElement) {
-          if (existingFragment !== fragmentElement) {
-            contentElement.replaceChild(fragmentElement, existingFragment);
-          }
-        } else if (!existingFragment && fragmentElement) {
-          contentElement.appendChild(fragmentElement);
+      // 查找当前DOM中的fragment元素
+      const existingFragment = contentElement.querySelector('.rich-text-fragment');
+
+      if (existingFragment && fragmentElement) {
+        if (existingFragment !== fragmentElement) {
+          // 如果DOM中的fragment不是最新的，替换它
+          contentElement.replaceChild(fragmentElement, existingFragment);
         }
+        // 如果element相同，说明render()已经更新了现有元素的内容
+      } else if (!existingFragment && fragmentElement) {
+        // 如果DOM中没有fragment（异常情况），添加它
+        contentElement.appendChild(fragmentElement);
       }
     }
   }
