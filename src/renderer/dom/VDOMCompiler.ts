@@ -70,6 +70,17 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
         this.dirtyTracker.mark(event.payload.blockId, 'updated');
       }
     });
+
+    // 撤销/重做时强制完整重新渲染
+    controller.on('command:undone', () => {
+      this.renderCache.clear();
+      this.isFirstRender = true;
+    });
+
+    controller.on('command:redone', () => {
+      this.renderCache.clear();
+      this.isFirstRender = true;
+    });
   }
 
   /**
@@ -598,14 +609,15 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const block = this.controller.getBlock(blockId);
     if (!block) return;
 
-    // 先同步当前 DOM 内容到模型
+    // 先同步当前 DOM 内容到模型（使用 updateBlock 记录历史，以便撤销）
     const blockElement = this.blockElements.get(blockId);
     if (blockElement) {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
         const currentText = editableElement.textContent || '';
         if (currentText !== block.data.text) {
-          this.controller.updateBlockDirect(blockId, { text: currentText });
+          // 使用 updateBlock 而不是 updateBlockDirect，以便撤销时能正确恢复
+          this.controller.updateBlock(blockId, { text: currentText });
         }
       }
     }

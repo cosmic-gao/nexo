@@ -202,14 +202,14 @@ export class KeyboardHandler {
     const selectionAdapter = this.deps.getSelectionAdapter();
     if (!controller) return;
 
-    // 同步 DOM 到模型
+    // 同步 DOM 到模型（使用 updateBlock 记录历史，以便撤销时正确恢复）
     const blockElement = this.deps.getBlockElement(blockId);
     if (blockElement) {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
         const currentText = editableElement.textContent || '';
         if (currentText !== block.data.text) {
-          controller.updateBlockDirect(blockId, { text: currentText });
+          controller.updateBlock(blockId, { text: currentText });
         }
       }
     }
