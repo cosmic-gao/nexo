@@ -131,7 +131,7 @@ export class LazyBlockManager {
     const viewportTop = scrollTop;
     const viewportBottom = scrollTop + containerRect.height;
 
-    let startIndex = 0;
+    let startIndex = -1; // 使用 -1 表示尚未找到
     let endIndex = blockIds.length - 1;
     let totalHeight = 0;
     let offsetTop = 0;
@@ -146,8 +146,8 @@ export class LazyBlockManager {
       const blockTop = accumulatedHeight;
       const blockBottom = blockTop + blockHeight;
 
-      // 找到第一个可视块
-      if (blockBottom >= viewportTop && startIndex === 0) {
+      // 找到第一个可视块（只设置一次）
+      if (startIndex === -1 && blockBottom >= viewportTop) {
         startIndex = Math.max(0, i - this.config.bufferSize);
         offsetTop = this.getAccumulatedHeight(blockIds, 0, startIndex);
       }
@@ -158,6 +158,11 @@ export class LazyBlockManager {
       }
 
       accumulatedHeight += blockHeight;
+    }
+
+    // 如果没有找到可视块，默认显示开头
+    if (startIndex === -1) {
+      startIndex = 0;
     }
 
     totalHeight = accumulatedHeight;

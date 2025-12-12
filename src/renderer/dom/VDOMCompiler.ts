@@ -17,6 +17,7 @@ import { detectMarkdownShortcut, extractCodeLanguage } from './MarkdownShortcuts
 import { DirtyTracker } from '../vdom/DirtyTracker';
 import { BlockRenderCache } from '../vdom/MemoizedBlock';
 import { LazyBlockManager, type VisibleRange, type LazyBlockConfig } from '../vdom/LazyBlock';
+import { extractTextFromElement } from './textUtils';
 
 /**
  * VDOMCompiler 配置
@@ -269,35 +270,64 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const children: VNode[] = [];
     const useLazyLoading = this.visibleRange && this.lazyManager?.isEnabled();
 
-    if (useLazyLoading && this.visibleRange) {
-      // 懒加载模式：只渲染可视范围内的块
-      const { startIndex, endIndex, offsetTop, totalHeight } = this.visibleRange;
+    // 暂时禁用懒加载，直接渲染所有块
+    // TODO: 修复懒加载逻辑后重新启用
+    const lazyLoadingEnabled = false;
+    if (lazyLoadingEnabled && useLazyLoading && this.visibleRange) {
+      // 懒加载模式：只渲染可视范围内的根块
+      // 需要找出哪些根块在可视范围内
+      const { startIndex, endIndex } = this.visibleRange;
       
-      // 上方占位符
-      if (offsetTop > 0) {
-        children.push(this.createPlaceholder('top', offsetTop));
-      }
-
-      // 渲染可视范围内的根块
+      // 构建可视范围内的 blockId 集合（包括子块）
+      const visibleBlockIds = new Set<string>();
       for (let i = startIndex; i <= endIndex && i < this.flatBlockIds.length; i++) {
-        const blockId = this.flatBlockIds[i];
-        const block = doc.blocks[blockId];
-        
-        // 只渲染根块（非嵌套块由父块渲染）
-        if (block && !block.parentId) {
-          const rootIndex = doc.rootIds.indexOf(blockId);
-          if (rootIndex !== -1) {
-            const blockVNode = this.buildBlockVNode(block, doc, 0, rootIndex);
-            children.push(blockVNode);
+        visibleBlockIds.add(this.flatBlockIds[i]);
+      }
+      
+      // 找出需要渲染的根块：如果根块本身或其任意后代在可视范围内
+      const visibleRootBlockIds: string[] = [];
+      let firstVisibleRootIndex = -1;
+      for (let i = 0; i < doc.rootIds.length; i++) {
+        const rootId = doc.rootIds[i];
+        if (this.isBlockOrDescendantVisible(rootId, doc, visibleBlockIds)) {
+          if (firstVisibleRootIndex === -1) {
+            firstVisibleRootIndex = i;
           }
+          visibleRootBlockIds.push(rootId);
         }
       }
+      
+      // 如果没有可视块，渲染所有块
+      if (firstVisibleRootIndex === -1) {
+        doc.rootIds.forEach((blockId, index) => {
+          const block = doc.blocks[blockId];
+          if (block) {
+            const blockVNode = this.buildBlockVNode(block, doc, 0, index);
+            children.push(blockVNode);
+          }
+        });
+      } else {
+        // 计算上方占位符高度（基于根块）
+        const topHeight = this.calculateRootBlocksHeight(doc, 0, firstVisibleRootIndex);
+        if (topHeight > 0) {
+          children.push(this.createPlaceholder('top', topHeight));
+        }
 
-      // 下方占位符
-      const renderedHeight = this.calculateRenderedHeight(startIndex, endIndex);
-      const bottomHeight = totalHeight - offsetTop - renderedHeight;
-      if (bottomHeight > 0) {
-        children.push(this.createPlaceholder('bottom', bottomHeight));
+        // 渲染可视范围内的根块
+        visibleRootBlockIds.forEach((blockId, index) => {
+          const block = doc.blocks[blockId];
+          if (block) {
+            const blockVNode = this.buildBlockVNode(block, doc, 0, index);
+            children.push(blockVNode);
+          }
+        });
+
+        // 计算下方占位符高度（基于根块）
+        const lastVisibleRootIndex = firstVisibleRootIndex + visibleRootBlockIds.length;
+        const bottomHeight = this.calculateRootBlocksHeight(doc, lastVisibleRootIndex, doc.rootIds.length);
+        if (bottomHeight > 0) {
+          children.push(this.createPlaceholder('bottom', bottomHeight));
+        }
       }
     } else {
       // 普通模式：渲染所有块
@@ -311,6 +341,26 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     }
 
     return h('div', { className: 'nexo-blocks-container' }, ...children);
+  }
+  
+  /**
+   * 检查块或其后代是否在可视范围内
+   */
+  private isBlockOrDescendantVisible(blockId: string, doc: Document, visibleBlockIds: Set<string>): boolean {
+    if (visibleBlockIds.has(blockId)) {
+      return true;
+    }
+    
+    const block = doc.blocks[blockId];
+    if (block && block.childrenIds.length > 0) {
+      for (const childId of block.childrenIds) {
+        if (this.isBlockOrDescendantVisible(childId, doc, visibleBlockIds)) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
   }
 
   /**
@@ -326,18 +376,34 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   }
 
   /**
-   * 计算已渲染块的高度
+   * 计算根块范围的高度（包含子块）
    */
-  private calculateRenderedHeight(startIndex: number, endIndex: number): number {
+  private calculateRootBlocksHeight(doc: Document, startRootIndex: number, endRootIndex: number): number {
     let height = 0;
-    for (let i = startIndex; i <= endIndex && i < this.flatBlockIds.length; i++) {
-      const blockId = this.flatBlockIds[i];
-      const element = this.blockElements.get(blockId);
-      if (element) {
-        height += element.offsetHeight;
-      } else {
-        height += 40; // 估计高度
-      }
+    for (let i = startRootIndex; i < endRootIndex && i < doc.rootIds.length; i++) {
+      const rootId = doc.rootIds[i];
+      height += this.calculateBlockTreeHeight(rootId, doc);
+    }
+    return height;
+  }
+  
+  /**
+   * 计算单个块及其子块的总高度
+   */
+  private calculateBlockTreeHeight(blockId: string, doc: Document): number {
+    const element = this.blockElements.get(blockId);
+    if (element) {
+      // 如果有 DOM 元素，直接使用其高度（包含子块）
+      return element.offsetHeight;
+    }
+    
+    // 没有 DOM 元素时，递归计算估计高度
+    const block = doc.blocks[blockId];
+    if (!block) return 40;
+    
+    let height = 40; // 块本身的估计高度
+    for (const childId of block.childrenIds) {
+      height += this.calculateBlockTreeHeight(childId, doc);
     }
     return height;
   }
@@ -403,11 +469,22 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   }
 
   /**
+   * 将文本转换为虚拟节点数组
+   * 直接使用文本节点，通过 CSS white-space: pre-wrap 来显示换行
+   */
+  private textWithLineBreaks(content: string): VNode[] {
+    if (!content) return [];
+    // 直接返回单个文本节点，换行由 CSS 处理
+    return [text(content)];
+  }
+  
+  /**
    * 创建块内容
    */
   private createBlockContent(block: Block): VNode {
     const blockText = block.data.text || '';
     const placeholder = this.getPlaceholder(block.type);
+    const textNodes = this.textWithLineBreaks(blockText);
 
     switch (block.type) {
       case 'paragraph':
@@ -415,28 +492,28 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
           className: 'nexo-block-content',
           contentEditable: 'true',
           'data-placeholder': placeholder,
-        }, blockText ? text(blockText) : null);
+        }, ...textNodes);
 
       case 'heading1':
         return h('h1', {
           className: 'nexo-block-content',
           contentEditable: 'true',
           'data-placeholder': placeholder,
-        }, blockText ? text(blockText) : null);
+        }, ...textNodes);
 
       case 'heading2':
         return h('h2', {
           className: 'nexo-block-content',
           contentEditable: 'true',
           'data-placeholder': placeholder,
-        }, blockText ? text(blockText) : null);
+        }, ...textNodes);
 
       case 'heading3':
         return h('h3', {
           className: 'nexo-block-content',
           contentEditable: 'true',
           'data-placeholder': placeholder,
-        }, blockText ? text(blockText) : null);
+        }, ...textNodes);
 
       case 'bulletList':
         return h('div', { className: 'nexo-list-item' },
@@ -445,7 +522,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
             className: 'nexo-block-content',
             contentEditable: 'true',
             'data-placeholder': placeholder,
-          }, blockText ? text(blockText) : null)
+          }, ...textNodes)
         );
 
       case 'numberedList':
@@ -455,7 +532,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
             className: 'nexo-block-content',
             contentEditable: 'true',
             'data-placeholder': placeholder,
-          }, blockText ? text(blockText) : null)
+          }, ...textNodes)
         );
 
       case 'todoList':
@@ -469,7 +546,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
             className: `nexo-block-content ${block.data.checked ? 'nexo-todo-checked' : ''}`,
             contentEditable: 'true',
             'data-placeholder': placeholder,
-          }, blockText ? text(blockText) : null)
+          }, ...textNodes)
         );
 
       case 'quote':
@@ -478,7 +555,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
             className: 'nexo-block-content',
             contentEditable: 'true',
             'data-placeholder': placeholder,
-          }, blockText ? text(blockText) : null)
+          }, ...textNodes)
         );
 
       case 'code':
@@ -487,7 +564,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
             className: 'nexo-block-content',
             contentEditable: 'true',
             'data-placeholder': '输入代码...',
-          }, blockText ? text(blockText) : null)
+          }, ...textNodes)
         );
 
       case 'divider':
@@ -507,7 +584,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
         return h('div', {
           className: 'nexo-block-content',
           contentEditable: 'true',
-        }, blockText ? text(blockText) : null);
+        }, ...textNodes);
     }
   }
 
@@ -565,9 +642,8 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    const text = block.type === 'code' 
-      ? editableElement.innerText || ''
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本，正确处理 <br> 为换行符
+    const text = extractTextFromElement(editableElement);
     
     if (block.type !== 'code' && text === '/') {
       this.controller.emitCustom('focus:changed', { blockId, showSlashMenu: true });
@@ -629,9 +705,8 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    const text = block.type === 'code'
-      ? editableElement.innerText || ''
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本
+    const text = extractTextFromElement(editableElement);
     
     this.dirtyTracker.mark(blockId, 'updated');
     this.controller.updateBlockDirect(blockId, { text });
@@ -770,7 +845,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     if (blockElement) {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
-        const currentText = editableElement.textContent || '';
+        const currentText = extractTextFromElement(editableElement);
         if (currentText !== block.data.text) {
           // 使用 updateBlock 而不是 updateBlockDirect，以便撤销时能正确恢复
           this.controller.updateBlock(blockId, { text: currentText });
@@ -1277,7 +1352,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
         this.dirtyTracker.mark(blockId, 'updated');
-        this.controller.updateBlockDirect(blockId, { text: editableElement.textContent || '' });
+        this.controller.updateBlockDirect(blockId, { text: extractTextFromElement(editableElement) });
       }
     }
   }

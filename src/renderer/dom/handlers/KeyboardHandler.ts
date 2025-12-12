@@ -6,6 +6,7 @@
 import type { EditorController } from '../../../logic/EditorController';
 import type { DOMSelectionAdapter } from '../DOMSelectionAdapter';
 import type { Block } from '../../../model/types';
+import { extractTextFromElement } from '../textUtils';
 
 export interface KeyboardHandlerDeps {
   getController(): EditorController | null;
@@ -207,7 +208,7 @@ export class KeyboardHandler {
     if (blockElement) {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
-        const currentText = editableElement.textContent || '';
+        const currentText = extractTextFromElement(editableElement);
         if (currentText !== block.data.text) {
           controller.updateBlock(blockId, { text: currentText });
         }

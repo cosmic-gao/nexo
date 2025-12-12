@@ -5,6 +5,7 @@
 
 import type { Block, BlockType } from '../../model/types';
 import type { BlockRenderer, RenderContext } from '../types';
+import { extractTextFromElement } from './textUtils';
 
 export abstract class BaseBlockRenderer implements BlockRenderer<HTMLElement> {
   abstract type: BlockType;
@@ -15,7 +16,9 @@ export abstract class BaseBlockRenderer implements BlockRenderer<HTMLElement> {
     const editableElement = element.querySelector('[contenteditable="true"]') as HTMLElement;
     if (editableElement && block.data.text !== undefined) {
       // 只在内容真正不同时更新，避免打断用户输入
-      if (editableElement.textContent !== block.data.text) {
+      const currentText = extractTextFromElement(editableElement);
+      if (currentText !== block.data.text) {
+        // 设置文本内容，CSS white-space: pre-wrap 会处理换行显示
         editableElement.textContent = block.data.text;
       }
     }
@@ -38,6 +41,7 @@ export abstract class BaseBlockRenderer implements BlockRenderer<HTMLElement> {
     element.className = 'nexo-block-content';
     element.contentEditable = 'true';
     element.dataset.placeholder = this.getPlaceholder(block.type);
+    // 使用 textContent 设置文本，CSS white-space: pre-wrap 会处理换行显示
     element.textContent = block.data.text || '';
     element.style.outline = 'none';
     return element;

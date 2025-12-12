@@ -209,8 +209,17 @@ function diffChildren(
       oldElement = childElements[old.index] || null;
     }
 
-    // 递归 diff
-    diffNode(oldChild, newChild, oldElement, patches);
+    // 递归 diff，传入当前位置 index 用于新增节点的插入位置
+    if (oldChild === null && newChild !== null) {
+      // 新增节点：需要带上插入位置
+      patches.push({
+        type: 'CREATE',
+        newNode: newChild,
+        index: newIndex,
+      });
+    } else {
+      diffNode(oldChild, newChild, oldElement, patches);
+    }
   });
 
   // 删除多余的旧节点

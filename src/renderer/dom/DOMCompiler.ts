@@ -8,6 +8,7 @@ import type { EditorController } from '../../logic/EditorController';
 import type { Compiler, BlockRenderer, RenderContext, SelectionAdapter } from '../types';
 import { DOMSelectionAdapter } from './DOMSelectionAdapter';
 import { detectMarkdownShortcut, extractCodeLanguage } from './MarkdownShortcuts';
+import { extractTextFromElement } from './textUtils';
 
 export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   name = 'dom';
@@ -81,10 +82,8 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    // 代码块使用 innerText 保留换行，其他块使用 textContent
-    const text = block.type === 'code' 
-      ? editableElement.innerText || ''
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本，正确处理 <br> 为换行符
+    const text = extractTextFromElement(editableElement);
     
     // 检查斜杠命令（仅非代码块）
     if (block.type !== 'code' && text === '/') {
@@ -167,10 +166,8 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    // 代码块使用 innerText 保留换行
-    const text = block.type === 'code'
-      ? editableElement.innerText || ''
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本
+    const text = extractTextFromElement(editableElement);
     this.controller.updateBlockDirect(blockId, { text });
   }
 
@@ -623,7 +620,7 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
 
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
-        this.controller.updateBlockDirect(blockId, { text: editableElement.textContent || '' });
+        this.controller.updateBlockDirect(blockId, { text: extractTextFromElement(editableElement) });
       }
     }
   }

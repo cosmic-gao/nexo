@@ -6,6 +6,7 @@
 import type { EditorController } from '../../../logic/EditorController';
 import type { DOMSelectionAdapter } from '../DOMSelectionAdapter';
 import { detectMarkdownShortcut, extractCodeLanguage } from '../MarkdownShortcuts';
+import { extractTextFromElement } from '../textUtils';
 
 export interface InputHandlerDeps {
   getContainer(): HTMLElement | null;
@@ -62,10 +63,8 @@ export class InputHandler {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    // 代码块使用 innerText 保留换行
-    const text = block.type === 'code' 
-      ? editableElement.innerText 
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本，将 <br> 转换为 \n
+    const text = extractTextFromElement(editableElement);
 
     // 检测 Markdown 快捷输入（代码块除外）
     if (block.type !== 'code') {
@@ -113,7 +112,7 @@ export class InputHandler {
       const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
       if (editableElement) {
         this.deps.markDirty(blockId);
-        controller.updateBlockDirect(blockId, { text: editableElement.textContent || '' });
+        controller.updateBlockDirect(blockId, { text: extractTextFromElement(editableElement) });
       }
     }
   };
@@ -138,9 +137,8 @@ export class InputHandler {
     const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
     if (!editableElement) return;
 
-    const text = block.type === 'code'
-      ? editableElement.innerText
-      : editableElement.textContent || '';
+    // 从 DOM 中提取文本
+    const text = extractTextFromElement(editableElement);
 
     this.deps.markDirty(blockId);
     controller.updateBlockDirect(blockId, { text });
