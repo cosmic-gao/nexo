@@ -1,9 +1,9 @@
 /**
- * SlashMenu - 斜杠命令菜单
- * 类似 Notion 的 "/" 命令菜单
+ * Plugin - SlashMenu 斜杠命令菜单
  */
 
-import type { EditorInterface, BlockType, Plugin } from '../core/types';
+import type { BlockType } from '../model/types';
+import type { Plugin, PluginContext } from './types';
 
 interface SlashMenuItem {
   id: string;
@@ -105,10 +105,10 @@ const defaultMenuItems: SlashMenuItem[] = [
   },
 ];
 
-export class SlashMenu implements Plugin {
+export class SlashMenuPlugin implements Plugin {
   name = 'slash-menu';
 
-  private editor: EditorInterface | null = null;
+  private context: PluginContext | null = null;
   private menuElement: HTMLElement | null = null;
   private items: SlashMenuItem[] = defaultMenuItems;
   private filteredItems: SlashMenuItem[] = defaultMenuItems;
@@ -120,6 +120,7 @@ export class SlashMenu implements Plugin {
   private boundHandleKeyDown: (e: KeyboardEvent) => void;
   private boundHandleInput: (e: Event) => void;
   private boundHandleClick: (e: MouseEvent) => void;
+  private unsubscribeFocus: (() => void) | null = null;
 
   constructor() {
     this.boundHandleKeyDown = this.handleKeyDown.bind(this);
@@ -127,11 +128,12 @@ export class SlashMenu implements Plugin {
     this.boundHandleClick = this.handleClickOutside.bind(this);
   }
 
-  init(editor: EditorInterface): void {
-    this.editor = editor;
+  init(context: PluginContext): void {
+    this.context = context;
     this.createMenuElement();
-    
-    editor.on('focus:changed', (event) => {
+
+    // 监听焦点变化
+    this.unsubscribeFocus = context.controller.on('focus:changed', (event) => {
       const payload = event.payload as { blockId: string; showSlashMenu?: boolean };
       if (payload.showSlashMenu) {
         this.show(payload.blockId);
@@ -145,7 +147,10 @@ export class SlashMenu implements Plugin {
       this.menuElement.remove();
       this.menuElement = null;
     }
-    this.editor = null;
+    if (this.unsubscribeFocus) {
+      this.unsubscribeFocus();
+    }
+    this.context = null;
   }
 
   private createMenuElement(): void {
@@ -176,7 +181,6 @@ export class SlashMenu implements Plugin {
       </div>
     `;
 
-    // 绑定点击事件
     this.menuElement.querySelectorAll('.nexo-slash-menu-item').forEach((itemEl) => {
       itemEl.addEventListener('click', () => {
         const index = parseInt(itemEl.getAttribute('data-index') || '0', 10);
@@ -198,7 +202,6 @@ export class SlashMenu implements Plugin {
       itemEl.classList.toggle('selected', index === this.selectedIndex);
     });
 
-    // 滚动到可见区域
     const selectedEl = this.menuElement.querySelector('.nexo-slash-menu-item.selected');
     if (selectedEl) {
       selectedEl.scrollIntoView({ block: 'nearest' });
@@ -206,7 +209,7 @@ export class SlashMenu implements Plugin {
   }
 
   show(blockId: string): void {
-    if (!this.menuElement || !this.editor) return;
+    if (!this.menuElement || !this.context) return;
 
     this.currentBlockId = blockId;
     this.isVisible = true;
@@ -214,8 +217,7 @@ export class SlashMenu implements Plugin {
     this.searchQuery = '';
     this.filteredItems = this.items;
 
-    // 定位菜单
-    const blockElement = this.editor.getBlockElement(blockId);
+    const blockElement = this.context.compiler.getBlockElement(blockId);
     if (blockElement) {
       const rect = blockElement.getBoundingClientRect();
       this.menuElement.style.position = 'fixed';
@@ -226,9 +228,8 @@ export class SlashMenu implements Plugin {
     this.menuElement.style.display = 'block';
     this.renderMenu();
 
-    // 绑定事件
     document.addEventListener('keydown', this.boundHandleKeyDown, true);
-    this.editor.getContainer().addEventListener('input', this.boundHandleInput);
+    this.context.compiler.getContainer()?.addEventListener('input', this.boundHandleInput);
     document.addEventListener('click', this.boundHandleClick);
   }
 
@@ -238,10 +239,9 @@ export class SlashMenu implements Plugin {
     this.isVisible = false;
     this.menuElement.style.display = 'none';
 
-    // 解绑事件
     document.removeEventListener('keydown', this.boundHandleKeyDown, true);
-    if (this.editor) {
-      this.editor.getContainer().removeEventListener('input', this.boundHandleInput);
+    if (this.context) {
+      this.context.compiler.getContainer()?.removeEventListener('input', this.boundHandleInput);
     }
     document.removeEventListener('click', this.boundHandleClick);
   }
@@ -274,11 +274,10 @@ export class SlashMenu implements Plugin {
         e.preventDefault();
         e.stopPropagation();
         this.hide();
-        // 清除斜杠
-        if (this.currentBlockId && this.editor) {
-          const block = this.editor.getBlock(this.currentBlockId);
+        if (this.currentBlockId && this.context) {
+          const block = this.context.controller.getBlock(this.currentBlockId);
           if (block && block.data.text?.startsWith('/')) {
-            this.editor.updateBlock(this.currentBlockId, {
+            this.context.controller.updateBlockDirect(this.currentBlockId, {
               text: block.data.text.slice(1 + this.searchQuery.length),
             });
           }
@@ -287,21 +286,19 @@ export class SlashMenu implements Plugin {
     }
   }
 
-  private handleInput(e: Event): void {
-    if (!this.isVisible || !this.currentBlockId || !this.editor) return;
+  private handleInput(_e: Event): void {
+    if (!this.isVisible || !this.currentBlockId || !this.context) return;
 
-    const block = this.editor.getBlock(this.currentBlockId);
+    const block = this.context.controller.getBlock(this.currentBlockId);
     if (!block) return;
 
     const text = block.data.text || '';
-    
-    // 检查是否仍以 "/" 开头
+
     if (!text.startsWith('/')) {
       this.hide();
       return;
     }
 
-    // 提取搜索关键词
     this.searchQuery = text.slice(1).toLowerCase();
     this.filterItems(this.searchQuery);
   }
@@ -321,22 +318,18 @@ export class SlashMenu implements Plugin {
   }
 
   private selectItem(index: number): void {
-    if (!this.editor || !this.currentBlockId) return;
+    if (!this.context || !this.currentBlockId) return;
 
     const item = this.filteredItems[index];
     if (!item) return;
 
-    // 清除斜杠命令文本
-    this.editor.updateBlock(this.currentBlockId, { text: '' });
-
-    // 转换块类型
-    (this.editor as any).changeBlockType(this.currentBlockId, item.type);
+    this.context.controller.updateBlockDirect(this.currentBlockId, { text: '' });
+    this.context.controller.changeBlockType(this.currentBlockId, item.type);
 
     this.hide();
 
-    // 重新聚焦
     requestAnimationFrame(() => {
-      this.editor?.focus(this.currentBlockId!);
+      this.context?.compiler.focus(this.currentBlockId!);
     });
   }
 
@@ -349,14 +342,13 @@ export class SlashMenu implements Plugin {
     }
   }
 
-  // 公开方法：添加自定义菜单项
   addItem(item: SlashMenuItem): void {
     this.items.push(item);
   }
 
-  // 公开方法：移除菜单项
   removeItem(id: string): void {
     this.items = this.items.filter(item => item.id !== id);
   }
 }
+
 

@@ -1,155 +1,139 @@
 /**
  * Nexo Block Editor - 入口文件
- * 类 Notion 的块编辑器
+ * 跨平台编译器架构示例
  */
 
-import { Editor } from './src/core/Editor';
-import { SlashMenu } from './src/plugins/SlashMenu';
-import { Toolbar } from './src/plugins/Toolbar';
-import { DragHandle } from './src/plugins/DragHandle';
+// Model
+import { createBlock as createBlockData } from './src/model';
+
+// Logic
+import { EditorController } from './src/logic/EditorController';
+
+// Renderer
+import { DOMCompiler } from './src/renderer/dom/DOMCompiler';
+import {
+  ParagraphRenderer,
+  Heading1Renderer,
+  Heading2Renderer,
+  Heading3Renderer,
+  BulletListRenderer,
+  NumberedListRenderer,
+  TodoListRenderer,
+  QuoteRenderer,
+  CodeRenderer,
+  DividerRenderer,
+  ImageRenderer,
+} from './src/renderer/dom/renderers';
+
+// Plugins
+import { SlashMenuPlugin } from './src/plugins/SlashMenuPlugin';
+import { ToolbarPlugin } from './src/plugins/ToolbarPlugin';
+import { DragHandlePlugin } from './src/plugins/DragHandlePlugin';
+
+// Styles
 import './src/styles/index.css';
 
-// 等待 DOM 加载
+// ============================================
+// 初始化编辑器
+// ============================================
+
 document.addEventListener('DOMContentLoaded', () => {
-  // 创建编辑器容器
   const container = document.getElementById('editor');
   if (!container) {
     console.error('Editor container not found');
     return;
   }
 
-  // 初始化插件
-  const slashMenu = new SlashMenu();
-  const toolbar = new Toolbar();
-  const dragHandle = new DragHandle();
+  // 1. 创建控制器（Logic Layer）
+  const controller = new EditorController();
 
-  // 创建编辑器实例
-  const editor = new Editor({
-    container,
-    placeholder: "输入 '/' 使用命令...",
-    initialBlocks: [
-      {
-        id: 'block_welcome_1',
-        type: 'heading1',
-        data: { text: '欢迎使用 Nexo Editor' },
-      },
-      {
-        id: 'block_welcome_2',
-        type: 'paragraph',
-        data: { text: '这是一个类似 Notion 的块编辑器，使用原生 DOM 和模块化设计。' },
-      },
-      {
-        id: 'block_welcome_3',
-        type: 'paragraph',
-        data: { text: "输入 '/' 打开命令菜单，选择不同的块类型。" },
-      },
-      {
-        id: 'block_welcome_4',
-        type: 'heading2',
-        data: { text: '✨ 功能特点' },
-      },
-      {
-        id: 'block_welcome_5',
-        type: 'bulletList',
-        data: { text: '多种块类型：段落、标题、列表、引用、代码块等' },
-      },
-      {
-        id: 'block_welcome_6',
-        type: 'bulletList',
-        data: { text: '斜杠命令菜单 - 快速插入内容' },
-      },
-      {
-        id: 'block_welcome_7',
-        type: 'bulletList',
-        data: { text: '拖拽排序 - 重新组织内容' },
-      },
-      {
-        id: 'block_welcome_8',
-        type: 'bulletList',
-        data: { text: '撤销/重做 - 完整的编辑历史' },
-      },
-      {
-        id: 'block_welcome_9',
-        type: 'divider',
-        data: {},
-      },
-      {
-        id: 'block_welcome_10',
-        type: 'heading3',
-        data: { text: '📝 试试看' },
-      },
-      {
-        id: 'block_welcome_11',
-        type: 'todoList',
-        data: { text: '在下方输入一些文字', checked: false },
-      },
-      {
-        id: 'block_welcome_12',
-        type: 'todoList',
-        data: { text: "按 Enter 创建新块", checked: false },
-      },
-      {
-        id: 'block_welcome_13',
-        type: 'todoList',
-        data: { text: "输入 '/' 打开命令菜单", checked: false },
-      },
-      {
-        id: 'block_welcome_14',
-        type: 'paragraph',
-        data: { text: '' },
-      },
-    ],
-  });
+  // 2. 创建编译器（Renderer Layer）
+  const compiler = new DOMCompiler();
 
-  // 初始化插件
-  slashMenu.init(editor);
-  toolbar.init(editor);
-  dragHandle.init(editor);
+  // 3. 注册块渲染器
+  compiler.registerRenderer(new ParagraphRenderer());
+  compiler.registerRenderer(new Heading1Renderer());
+  compiler.registerRenderer(new Heading2Renderer());
+  compiler.registerRenderer(new Heading3Renderer());
+  compiler.registerRenderer(new BulletListRenderer());
+  compiler.registerRenderer(new NumberedListRenderer());
+  compiler.registerRenderer(new TodoListRenderer());
+  compiler.registerRenderer(new QuoteRenderer());
+  compiler.registerRenderer(new CodeRenderer());
+  compiler.registerRenderer(new DividerRenderer());
+  compiler.registerRenderer(new ImageRenderer());
 
-  // 监听内容变化
-  editor.on('content:changed', (event) => {
-    console.log('Content changed:', event.payload);
-    // 可以在这里保存到 localStorage 或发送到服务器
-    localStorage.setItem('nexo-editor-content', JSON.stringify(editor.toJSON()));
-  });
+  // 4. 初始化编译器
+  compiler.init(container, controller);
 
-  // 尝试从 localStorage 恢复内容
-  const savedContent = localStorage.getItem('nexo-editor-content');
-  if (savedContent) {
-    try {
-      // 可选：取消注释下面这行来恢复保存的内容
-      // editor.fromJSON(JSON.parse(savedContent));
-    } catch (e) {
-      console.warn('Failed to restore content:', e);
+  // 5. 添加初始内容
+  const initialBlocks = [
+    { type: 'heading1' as const, data: { text: '欢迎使用 Nexo Editor' } },
+    { type: 'paragraph' as const, data: { text: '这是一个采用跨平台编译器架构的块编辑器。' } },
+    { type: 'heading2' as const, data: { text: '📐 三层架构' } },
+    { type: 'bulletList' as const, data: { text: 'Model 层 - 纯数据结构，与平台无关' } },
+    { type: 'bulletList' as const, data: { text: 'Logic 层 - 业务逻辑，与平台无关' } },
+    { type: 'bulletList' as const, data: { text: 'Renderer 层 - 编译器实现，平台特定' } },
+    { type: 'divider' as const, data: {} },
+    { type: 'heading3' as const, data: { text: '✨ 特性' } },
+    { type: 'todoList' as const, data: { text: '多种块类型支持', checked: true } },
+    { type: 'todoList' as const, data: { text: '斜杠命令菜单', checked: true } },
+    { type: 'todoList' as const, data: { text: '浮动工具栏', checked: true } },
+    { type: 'todoList' as const, data: { text: '拖拽排序', checked: true } },
+    { type: 'todoList' as const, data: { text: '撤销/重做', checked: true } },
+    { type: 'paragraph' as const, data: { text: '' } },
+  ];
+
+  // 添加初始块
+  let lastBlockId: string | undefined;
+  initialBlocks.forEach(({ type, data }) => {
+    const block = controller.createBlock(type, data, lastBlockId);
+    if (block) {
+      lastBlockId = block.id;
     }
-  }
+  });
 
-  // 自动聚焦到第一个空块
+  // 6. 渲染文档
+  compiler.render(controller.getDocument());
+
+  // 7. 初始化插件
+  const pluginContext = { controller, compiler };
+
+  const slashMenu = new SlashMenuPlugin();
+  const toolbar = new ToolbarPlugin();
+  const dragHandle = new DragHandlePlugin();
+
+  slashMenu.init(pluginContext);
+  toolbar.init(pluginContext);
+  dragHandle.init(pluginContext);
+
+  // 8. 监听文档变化
+  controller.on('document:changed', () => {
+    console.log('Document changed');
+    localStorage.setItem('nexo-editor-content', JSON.stringify(controller.toJSON()));
+  });
+
+  // 9. 自动聚焦
   setTimeout(() => {
-    const blocks = editor.getBlocks();
+    const blocks = controller.getBlocks();
     const emptyBlock = blocks.find(b => !b.data.text);
     if (emptyBlock) {
-      editor.focus(emptyBlock.id);
-    } else {
-      editor.focus();
+      compiler.focus(emptyBlock.id);
     }
   }, 100);
 
   // 暴露到全局方便调试
-  (window as any).nexoEditor = editor;
-  
-  console.log('Nexo Editor initialized');
+  (window as any).nexo = {
+    controller,
+    compiler,
+    plugins: { slashMenu, toolbar, dragHandle },
+  };
+
+  console.log('Nexo Editor initialized with cross-platform architecture');
 });
 
-// 导出类型和类
-export { Editor } from './src/core/Editor';
-export { SlashMenu } from './src/plugins/SlashMenu';
-export type { 
-  Block, 
-  BlockType, 
-  BlockData, 
-  EditorConfig,
-  EditorInterface,
-  Plugin,
-} from './src/core/types';
-
+// 导出
+export { EditorController } from './src/logic/EditorController';
+export { DOMCompiler } from './src/renderer/dom/DOMCompiler';
+export * from './src/model/types';
+export * from './src/plugins';

@@ -1,16 +1,14 @@
 /**
- * Toolbar - 浮动工具栏插件
- * 选中文本时显示格式化工具
+ * Plugin - Toolbar 浮动工具栏
  */
 
-import type { EditorInterface, Plugin, BlockType } from '../core/types';
+import type { Plugin, PluginContext } from './types';
 
 interface ToolbarItem {
   id: string;
   icon: string;
   title: string;
-  action: (editor: EditorInterface) => void;
-  isActive?: (editor: EditorInterface) => boolean;
+  action: (context: PluginContext) => void;
 }
 
 const defaultToolbarItems: ToolbarItem[] = [
@@ -85,10 +83,10 @@ const defaultToolbarItems: ToolbarItem[] = [
     id: 'heading1',
     icon: `<span style="font-weight: 600; font-size: 14px;">H1</span>`,
     title: '标题 1',
-    action: (editor) => {
-      const selection = editor.getSelection();
+    action: (context) => {
+      const selection = context.controller.getSelection();
       if (selection) {
-        (editor as any).changeBlockType(selection.anchorBlockId, 'heading1');
+        context.controller.changeBlockType(selection.anchor.blockId, 'heading1');
       }
     },
   },
@@ -96,10 +94,10 @@ const defaultToolbarItems: ToolbarItem[] = [
     id: 'heading2',
     icon: `<span style="font-weight: 600; font-size: 13px;">H2</span>`,
     title: '标题 2',
-    action: (editor) => {
-      const selection = editor.getSelection();
+    action: (context) => {
+      const selection = context.controller.getSelection();
       if (selection) {
-        (editor as any).changeBlockType(selection.anchorBlockId, 'heading2');
+        context.controller.changeBlockType(selection.anchor.blockId, 'heading2');
       }
     },
   },
@@ -107,19 +105,19 @@ const defaultToolbarItems: ToolbarItem[] = [
     id: 'quote',
     icon: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V21"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3"/></svg>`,
     title: '引用',
-    action: (editor) => {
-      const selection = editor.getSelection();
+    action: (context) => {
+      const selection = context.controller.getSelection();
       if (selection) {
-        (editor as any).changeBlockType(selection.anchorBlockId, 'quote');
+        context.controller.changeBlockType(selection.anchor.blockId, 'quote');
       }
     },
   },
 ];
 
-export class Toolbar implements Plugin {
+export class ToolbarPlugin implements Plugin {
   name = 'toolbar';
 
-  private editor: EditorInterface | null = null;
+  private context: PluginContext | null = null;
   private toolbarElement: HTMLElement | null = null;
   private items: ToolbarItem[] = defaultToolbarItems;
   private isVisible: boolean = false;
@@ -134,12 +132,12 @@ export class Toolbar implements Plugin {
     this.boundHandleScroll = this.hide.bind(this);
   }
 
-  init(editor: EditorInterface): void {
-    this.editor = editor;
+  init(context: PluginContext): void {
+    this.context = context;
     this.createToolbarElement();
-    
+
     document.addEventListener('selectionchange', this.boundHandleSelectionChange);
-    editor.getContainer().addEventListener('mouseup', this.boundHandleMouseUp);
+    context.compiler.getContainer()?.addEventListener('mouseup', this.boundHandleMouseUp);
     window.addEventListener('scroll', this.boundHandleScroll, true);
   }
 
@@ -149,21 +147,21 @@ export class Toolbar implements Plugin {
       this.toolbarElement.remove();
       this.toolbarElement = null;
     }
-    
+
     document.removeEventListener('selectionchange', this.boundHandleSelectionChange);
-    if (this.editor) {
-      this.editor.getContainer().removeEventListener('mouseup', this.boundHandleMouseUp);
+    if (this.context) {
+      this.context.compiler.getContainer()?.removeEventListener('mouseup', this.boundHandleMouseUp);
     }
     window.removeEventListener('scroll', this.boundHandleScroll, true);
-    
-    this.editor = null;
+
+    this.context = null;
   }
 
   private createToolbarElement(): void {
     this.toolbarElement = document.createElement('div');
     this.toolbarElement.className = 'nexo-toolbar';
     this.toolbarElement.style.display = 'none';
-    
+
     this.renderToolbar();
     document.body.appendChild(this.toolbarElement);
   }
@@ -186,39 +184,36 @@ export class Toolbar implements Plugin {
       `;
     }).join('');
 
-    // 绑定点击事件
     this.toolbarElement.querySelectorAll('.nexo-toolbar-button').forEach(button => {
       button.addEventListener('mousedown', (e) => {
-        e.preventDefault(); // 防止失去选区
+        e.preventDefault();
         e.stopPropagation();
-        
+
         const id = button.getAttribute('data-id');
         const item = this.items.find(i => i.id === id);
-        if (item && this.editor) {
-          item.action(this.editor);
+        if (item && this.context) {
+          item.action(this.context);
         }
       });
     });
   }
 
   private handleSelectionChange(): void {
-    if (!this.editor) return;
-    
+    if (!this.context) return;
+
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
       this.hide();
       return;
     }
 
-    // 检查选区是否在编辑器内
     const range = selection.getRangeAt(0);
-    const container = this.editor.getContainer();
-    if (!container.contains(range.commonAncestorContainer)) {
+    const container = this.context.compiler.getContainer();
+    if (!container?.contains(range.commonAncestorContainer)) {
       this.hide();
       return;
     }
 
-    // 如果有选中文本，显示工具栏
     if (selection.toString().trim()) {
       this.show(range);
     } else {
@@ -227,7 +222,6 @@ export class Toolbar implements Plugin {
   }
 
   private handleMouseUp(): void {
-    // 延迟检查，等待选区稳定
     requestAnimationFrame(() => {
       this.handleSelectionChange();
     });
@@ -239,14 +233,12 @@ export class Toolbar implements Plugin {
     this.isVisible = true;
     this.toolbarElement.style.display = 'flex';
 
-    // 定位工具栏
     const rect = range.getBoundingClientRect();
     const toolbarRect = this.toolbarElement.getBoundingClientRect();
-    
+
     let left = rect.left + (rect.width / 2) - (toolbarRect.width / 2);
     let top = rect.top - toolbarRect.height - 8;
 
-    // 边界检查
     if (left < 8) left = 8;
     if (left + toolbarRect.width > window.innerWidth - 8) {
       left = window.innerWidth - toolbarRect.width - 8;
@@ -261,7 +253,7 @@ export class Toolbar implements Plugin {
 
   hide(): void {
     if (!this.toolbarElement) return;
-    
+
     this.isVisible = false;
     this.toolbarElement.style.display = 'none';
   }
@@ -274,7 +266,6 @@ export class Toolbar implements Plugin {
     }) as T;
   }
 
-  // 公开方法：添加自定义工具
   addItem(item: ToolbarItem, position?: number): void {
     if (position !== undefined) {
       this.items.splice(position, 0, item);
@@ -284,10 +275,10 @@ export class Toolbar implements Plugin {
     this.renderToolbar();
   }
 
-  // 公开方法：移除工具
   removeItem(id: string): void {
     this.items = this.items.filter(item => item.id !== id);
     this.renderToolbar();
   }
 }
+
 

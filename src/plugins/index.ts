@@ -1,8 +1,8 @@
 /**
- * Plugins - 插件导出
+ * Plugins - 导出
  */
 
-export * from './SlashMenu';
-export * from './Toolbar';
-export * from './DragHandle';
-
+export * from './types';
+export * from './SlashMenuPlugin';
+export * from './ToolbarPlugin';
+export * from './DragHandlePlugin';

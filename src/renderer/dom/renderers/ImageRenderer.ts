@@ -1,14 +1,15 @@
 /**
- * ImageRenderer - 图片块渲染器
+ * DOM Renderer - ImageRenderer
  */
 
-import type { Block, RenderContext } from '../core/types';
-import { BaseRenderer } from './BaseRenderer';
+import type { Block } from '../../../model/types';
+import type { RenderContext } from '../../types';
+import { BaseBlockRenderer } from '../BaseBlockRenderer';
 
-export class ImageRenderer extends BaseRenderer {
+export class ImageRenderer extends BaseBlockRenderer {
   type = 'image' as const;
 
-  render(block: Block, context: RenderContext): HTMLElement {
+  render(block: Block, context: RenderContext<HTMLElement>): HTMLElement {
     const wrapper = this.createBlockWrapper(block);
     wrapper.classList.add('nexo-block-image');
     wrapper.setAttribute('tabindex', '0');
@@ -25,7 +26,6 @@ export class ImageRenderer extends BaseRenderer {
       imageContainer.appendChild(img);
       wrapper.appendChild(imageContainer);
     } else {
-      // 上传占位符
       const placeholder = this.createUploadPlaceholder(block, context);
       wrapper.appendChild(placeholder);
     }
@@ -33,7 +33,7 @@ export class ImageRenderer extends BaseRenderer {
     return wrapper;
   }
 
-  private createUploadPlaceholder(block: Block, context: RenderContext): HTMLElement {
+  private createUploadPlaceholder(block: Block, context: RenderContext<HTMLElement>): HTMLElement {
     const placeholder = document.createElement('div');
     placeholder.className = 'nexo-image-placeholder';
 
@@ -61,7 +61,7 @@ export class ImageRenderer extends BaseRenderer {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (file) {
         const url = await this.readFileAsDataURL(file);
-        context.editor.updateBlock(block.id, { url });
+        context.controller.updateBlock(block.id, { url });
       }
     });
 
@@ -85,10 +85,9 @@ export class ImageRenderer extends BaseRenderer {
     });
   }
 
-  update(element: HTMLElement, block: Block, context: RenderContext): void {
-    // 如果URL变化了，需要重新渲染
+  update(element: HTMLElement, block: Block, context: RenderContext<HTMLElement>): void {
     const existingImg = element.querySelector('.nexo-image') as HTMLImageElement;
-    
+
     if (block.data.url && !existingImg) {
       element.innerHTML = '';
       const imageContainer = document.createElement('div');
@@ -107,4 +106,5 @@ export class ImageRenderer extends BaseRenderer {
     }
   }
 }
+
 

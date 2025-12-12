@@ -1,16 +1,17 @@
 /**
- * BaseRenderer - 块渲染器基类
- * 提供通用的渲染逻辑
+ * Renderer Layer - BaseBlockRenderer
+ * DOM 块渲染器基类
  */
 
-import type { Block, BlockRenderer, RenderContext, BlockType } from '../core/types';
+import type { Block, BlockType } from '../../model/types';
+import type { BlockRenderer, RenderContext } from '../types';
 
-export abstract class BaseRenderer implements BlockRenderer {
+export abstract class BaseBlockRenderer implements BlockRenderer<HTMLElement> {
   abstract type: BlockType;
 
-  abstract render(block: Block, context: RenderContext): HTMLElement;
+  abstract render(block: Block, context: RenderContext<HTMLElement>): HTMLElement;
 
-  update(element: HTMLElement, block: Block, context: RenderContext): void {
+  update(element: HTMLElement, block: Block, context: RenderContext<HTMLElement>): void {
     const editableElement = element.querySelector('[contenteditable="true"]') as HTMLElement;
     if (editableElement && block.data.text !== undefined) {
       // 只在内容真正不同时更新，避免打断用户输入
@@ -38,10 +39,7 @@ export abstract class BaseRenderer implements BlockRenderer {
     element.contentEditable = 'true';
     element.dataset.placeholder = this.getPlaceholder(block.type);
     element.textContent = block.data.text || '';
-    
-    // 防止默认的格式化行为
     element.style.outline = 'none';
-    
     return element;
   }
 
@@ -62,4 +60,5 @@ export abstract class BaseRenderer implements BlockRenderer {
     return placeholders[type] || '';
   }
 }
+
 

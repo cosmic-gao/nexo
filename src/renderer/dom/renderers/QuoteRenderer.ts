@@ -1,14 +1,15 @@
 /**
- * QuoteRenderer - 引用块渲染器
+ * DOM Renderer - QuoteRenderer
  */
 
-import type { Block, RenderContext } from '../core/types';
-import { BaseRenderer } from './BaseRenderer';
+import type { Block } from '../../../model/types';
+import type { RenderContext } from '../../types';
+import { BaseBlockRenderer } from '../BaseBlockRenderer';
 
-export class QuoteRenderer extends BaseRenderer {
+export class QuoteRenderer extends BaseBlockRenderer {
   type = 'quote' as const;
 
-  render(block: Block, _context: RenderContext): HTMLElement {
+  render(block: Block, _context: RenderContext<HTMLElement>): HTMLElement {
     const wrapper = this.createBlockWrapper(block);
     wrapper.classList.add('nexo-block-quote');
 
@@ -22,4 +23,5 @@ export class QuoteRenderer extends BaseRenderer {
     return wrapper;
   }
 }
+
 

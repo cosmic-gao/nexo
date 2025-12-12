@@ -1,19 +1,20 @@
 /**
- * ListRenderer - 列表渲染器
+ * DOM Renderer - ListRenderer
  */
 
-import type { Block, RenderContext } from '../core/types';
-import { BaseRenderer } from './BaseRenderer';
+import type { Block } from '../../../model/types';
+import type { RenderContext } from '../../types';
+import { BaseBlockRenderer } from '../BaseBlockRenderer';
 
-export class BulletListRenderer extends BaseRenderer {
+export class BulletListRenderer extends BaseBlockRenderer {
   type = 'bulletList' as const;
 
-  render(block: Block, _context: RenderContext): HTMLElement {
+  render(block: Block, _context: RenderContext<HTMLElement>): HTMLElement {
     const wrapper = this.createBlockWrapper(block);
     wrapper.classList.add('nexo-block-list', 'nexo-block-bullet-list');
 
-    const bulletContainer = document.createElement('div');
-    bulletContainer.className = 'nexo-list-container';
+    const listContainer = document.createElement('div');
+    listContainer.className = 'nexo-list-container';
 
     const bullet = document.createElement('span');
     bullet.className = 'nexo-list-bullet';
@@ -22,18 +23,18 @@ export class BulletListRenderer extends BaseRenderer {
     const content = this.createEditableElement(block, 'div');
     content.classList.add('nexo-list-content');
 
-    bulletContainer.appendChild(bullet);
-    bulletContainer.appendChild(content);
-    wrapper.appendChild(bulletContainer);
+    listContainer.appendChild(bullet);
+    listContainer.appendChild(content);
+    wrapper.appendChild(listContainer);
 
     return wrapper;
   }
 }
 
-export class NumberedListRenderer extends BaseRenderer {
+export class NumberedListRenderer extends BaseBlockRenderer {
   type = 'numberedList' as const;
 
-  render(block: Block, context: RenderContext): HTMLElement {
+  render(block: Block, context: RenderContext<HTMLElement>): HTMLElement {
     const wrapper = this.createBlockWrapper(block);
     wrapper.classList.add('nexo-block-list', 'nexo-block-numbered-list');
 
@@ -42,7 +43,6 @@ export class NumberedListRenderer extends BaseRenderer {
 
     const number = document.createElement('span');
     number.className = 'nexo-list-number';
-    // 计算当前序号
     const index = this.calculateListIndex(block, context);
     number.textContent = `${index}.`;
 
@@ -56,26 +56,25 @@ export class NumberedListRenderer extends BaseRenderer {
     return wrapper;
   }
 
-  private calculateListIndex(block: Block, context: RenderContext): number {
-    const blocks = context.editor.getBlocks();
+  private calculateListIndex(block: Block, context: RenderContext<HTMLElement>): number {
+    const blocks = context.controller.getBlocks();
     let index = 1;
-    
+
     for (const b of blocks) {
       if (b.id === block.id) break;
       if (b.type === 'numberedList') {
         index++;
       } else {
-        index = 1; // 重置计数
+        index = 1;
       }
     }
-    
+
     return index;
   }
 
-  update(element: HTMLElement, block: Block, context: RenderContext): void {
+  update(element: HTMLElement, block: Block, context: RenderContext<HTMLElement>): void {
     super.update(element, block, context);
-    
-    // 更新序号
+
     const numberElement = element.querySelector('.nexo-list-number');
     if (numberElement) {
       const index = this.calculateListIndex(block, context);
@@ -84,10 +83,10 @@ export class NumberedListRenderer extends BaseRenderer {
   }
 }
 
-export class TodoListRenderer extends BaseRenderer {
+export class TodoListRenderer extends BaseBlockRenderer {
   type = 'todoList' as const;
 
-  render(block: Block, context: RenderContext): HTMLElement {
+  render(block: Block, context: RenderContext<HTMLElement>): HTMLElement {
     const wrapper = this.createBlockWrapper(block);
     wrapper.classList.add('nexo-block-list', 'nexo-block-todo-list');
 
@@ -98,9 +97,9 @@ export class TodoListRenderer extends BaseRenderer {
     checkbox.type = 'checkbox';
     checkbox.className = 'nexo-todo-checkbox';
     checkbox.checked = block.data.checked || false;
-    
+
     checkbox.addEventListener('change', () => {
-      context.editor.updateBlock(block.id, { checked: checkbox.checked });
+      context.controller.updateBlock(block.id, { checked: checkbox.checked });
     });
 
     const content = this.createEditableElement(block, 'div');
@@ -116,19 +115,20 @@ export class TodoListRenderer extends BaseRenderer {
     return wrapper;
   }
 
-  update(element: HTMLElement, block: Block, context: RenderContext): void {
+  update(element: HTMLElement, block: Block, context: RenderContext<HTMLElement>): void {
     super.update(element, block, context);
-    
+
     const checkbox = element.querySelector('.nexo-todo-checkbox') as HTMLInputElement;
     const content = element.querySelector('.nexo-list-content');
-    
+
     if (checkbox) {
       checkbox.checked = block.data.checked || false;
     }
-    
+
     if (content) {
       content.classList.toggle('nexo-todo-checked', block.data.checked || false);
     }
   }
 }
+
 
