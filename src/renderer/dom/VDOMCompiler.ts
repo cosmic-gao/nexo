@@ -930,7 +930,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   /**
    * 清除块选择
    */
-  private clearBlockSelection(): void {
+  clearBlockSelection(): void {
     this.clearBlockSelectionUI();
     this.selectedBlockIds.clear();
     this.selectionAnchorBlockId = null;
