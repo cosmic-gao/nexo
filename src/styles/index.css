@@ -144,6 +144,33 @@
   background-color: var(--nexo-accent-light);
 }
 
+/* 多块选择样式 */
+.nexo-block-selected {
+  background-color: var(--nexo-accent-light);
+  position: relative;
+}
+
+.nexo-block-selected::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background-color: var(--nexo-accent);
+  border-radius: 2px;
+}
+
+.nexo-block-selected .nexo-block-content {
+  background-color: rgba(35, 131, 226, 0.1);
+  border-radius: var(--nexo-radius-sm);
+}
+
+/* 多块选择时禁用文本选择 */
+.nexo-editor.nexo-selecting .nexo-block-content {
+  user-select: none;
+}
+
 .nexo-block-content {
   outline: none;
   word-break: break-word;
@@ -219,6 +246,94 @@
 .nexo-block[data-depth="5"] {
   margin-left: 120px;
 }
+
+/* ============================================
+   富文本格式样式
+   ============================================ */
+
+/* 加粗 */
+.nexo-block-content b,
+.nexo-block-content strong {
+  font-weight: 600;
+  color: var(--nexo-text-primary);
+}
+
+/* 斜体 */
+.nexo-block-content i,
+.nexo-block-content em {
+  font-style: italic;
+}
+
+/* 下划线 */
+.nexo-block-content u {
+  text-decoration: underline;
+  text-decoration-color: var(--nexo-text-secondary);
+  text-underline-offset: 2px;
+}
+
+/* 删除线 */
+.nexo-block-content s,
+.nexo-block-content strike,
+.nexo-block-content del {
+  text-decoration: line-through;
+  color: var(--nexo-text-muted);
+}
+
+/* 行内代码 */
+.nexo-inline-code,
+.nexo-block-content code:not(.nexo-code-block code) {
+  font-family: var(--nexo-font-mono);
+  font-size: 0.9em;
+  background: var(--nexo-bg-tertiary);
+  color: #e06c75;
+  padding: 0.15em 0.4em;
+  border-radius: var(--nexo-radius-sm);
+  margin: 0 0.1em;
+}
+
+/* 链接 */
+.nexo-block-content a {
+  color: var(--nexo-accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(35, 131, 226, 0.4);
+  text-underline-offset: 2px;
+  cursor: pointer;
+  transition: all var(--nexo-transition-fast);
+}
+
+.nexo-block-content a:hover {
+  text-decoration-color: var(--nexo-accent);
+  background: var(--nexo-accent-light);
+  border-radius: 2px;
+}
+
+/* 高亮/标记 */
+.nexo-highlight,
+.nexo-block-content mark {
+  background: rgba(255, 212, 0, 0.4);
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+}
+
+/* 颜色文本 */
+.nexo-text-red { color: #e03e3e; }
+.nexo-text-orange { color: #d9730d; }
+.nexo-text-yellow { color: #dfab01; }
+.nexo-text-green { color: #0f7b6c; }
+.nexo-text-blue { color: #0b6e99; }
+.nexo-text-purple { color: #6940a5; }
+.nexo-text-pink { color: #ad1a72; }
+.nexo-text-gray { color: var(--nexo-text-muted); }
+
+/* 背景颜色 */
+.nexo-bg-red { background: rgba(224, 62, 62, 0.2); }
+.nexo-bg-orange { background: rgba(217, 115, 13, 0.2); }
+.nexo-bg-yellow { background: rgba(223, 171, 1, 0.2); }
+.nexo-bg-green { background: rgba(15, 123, 108, 0.2); }
+.nexo-bg-blue { background: rgba(11, 110, 153, 0.2); }
+.nexo-bg-purple { background: rgba(105, 64, 165, 0.2); }
+.nexo-bg-pink { background: rgba(173, 26, 114, 0.2); }
+.nexo-bg-gray { background: var(--nexo-bg-tertiary); }
 
 /* Drop Indicator */
 .nexo-drop-indicator {

@@ -7,6 +7,7 @@ import type { Block, Document } from '../../model/types';
 import type { EditorController } from '../../logic/EditorController';
 import type { Compiler, BlockRenderer, RenderContext, SelectionAdapter } from '../types';
 import { DOMSelectionAdapter } from './DOMSelectionAdapter';
+import { detectMarkdownShortcut, extractCodeLanguage } from './MarkdownShortcuts';
 
 export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   name = 'dom';
@@ -87,12 +88,64 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     
     // 检查斜杠命令（仅非代码块）
     if (block.type !== 'code' && text === '/') {
-      this.controller.emit('focus:changed', { blockId, showSlashMenu: true });
+      this.controller.emitCustom('focus:changed', { blockId, showSlashMenu: true });
       return;
+    }
+
+    // 检查 Markdown 快捷输入（仅段落块）
+    if (block.type === 'paragraph') {
+      const markdownMatch = detectMarkdownShortcut(text);
+      if (markdownMatch) {
+        this.applyMarkdownShortcut(blockId, markdownMatch, text);
+        return;
+      }
     }
 
     // 直接更新（不记录历史，用于实时输入）
     this.controller.updateBlockDirect(blockId, { text });
+  }
+
+  /**
+   * 应用 Markdown 快捷输入
+   */
+  private applyMarkdownShortcut(
+    blockId: string,
+    match: { type: import('../../model/types').BlockType; pattern: RegExp; data?: Record<string, unknown> },
+    text: string
+  ): void {
+    if (!this.controller) return;
+
+    // 改变块类型
+    this.controller.changeBlockType(blockId, match.type);
+
+    // 如果是代码块，提取语言
+    if (match.type === 'code') {
+      const language = extractCodeLanguage(text.trim());
+      if (language) {
+        this.controller.updateBlockDirect(blockId, { text: '', language });
+      } else {
+        this.controller.updateBlockDirect(blockId, { text: '' });
+      }
+    } else if (match.type === 'divider') {
+      // 分割线不需要文本
+      this.controller.updateBlockDirect(blockId, { text: '' });
+      // 创建新段落在分割线后
+      const newBlock = this.controller.createBlock('paragraph', { text: '' }, blockId);
+      if (newBlock) {
+        requestAnimationFrame(() => {
+          this.focus(newBlock.id);
+        });
+      }
+    } else {
+      // 清除触发文本，设置额外数据
+      this.controller.updateBlockDirect(blockId, { text: '', ...match.data });
+    }
+
+    // 重新渲染并聚焦
+    this.render(this.controller.getDocument());
+    requestAnimationFrame(() => {
+      this.focus(blockId);
+    });
   }
 
   /**
@@ -137,7 +190,7 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const block = this.controller.getBlock(blockId);
     if (!block) return;
 
-    // Ctrl+Z / Ctrl+Shift+Z
+    // Ctrl+Z / Ctrl+Shift+Z - 撤销/重做
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
       e.preventDefault();
       if (e.shiftKey) {
@@ -146,6 +199,20 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
         this.controller.undo();
       }
       return;
+    }
+
+    // Ctrl+Y - 重做
+    if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+      e.preventDefault();
+      this.controller.redo();
+      return;
+    }
+
+    // 富文本格式化快捷键（非代码块）
+    if ((e.ctrlKey || e.metaKey) && block.type !== 'code') {
+      if (this.handleFormatShortcut(e, blockId)) {
+        return;
+      }
     }
 
     // Enter - 代码块中允许换行
@@ -379,6 +446,111 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     requestAnimationFrame(() => {
       this.focus(blockId);
     });
+  }
+
+  /**
+   * 处理富文本格式化快捷键
+   */
+  private handleFormatShortcut(e: KeyboardEvent, blockId: string): boolean {
+    const key = e.key.toLowerCase();
+    let command: string | null = null;
+
+    switch (key) {
+      case 'b': // Ctrl+B 加粗
+        command = 'bold';
+        break;
+      case 'i': // Ctrl+I 斜体
+        command = 'italic';
+        break;
+      case 'u': // Ctrl+U 下划线
+        command = 'underline';
+        break;
+      case 's': // Ctrl+Shift+S 删除线
+        if (e.shiftKey) {
+          command = 'strikeThrough';
+        }
+        break;
+      case 'e': // Ctrl+E 行内代码
+        command = 'code';
+        break;
+      case 'k': // Ctrl+K 链接
+        command = 'link';
+        break;
+      default:
+        return false;
+    }
+
+    if (command) {
+      e.preventDefault();
+      this.applyFormat(command, blockId);
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * 应用文本格式
+   */
+  private applyFormat(command: string, blockId: string): void {
+    const selection = window.getSelection();
+    if (!selection || selection.isCollapsed) return;
+
+    // 使用 document.execCommand 应用格式（简单但有效）
+    if (command === 'code') {
+      // 行内代码使用特殊处理
+      const range = selection.getRangeAt(0);
+      const selectedText = range.toString();
+      
+      if (selectedText) {
+        const codeElement = document.createElement('code');
+        codeElement.className = 'nexo-inline-code';
+        codeElement.textContent = selectedText;
+        
+        range.deleteContents();
+        range.insertNode(codeElement);
+        
+        // 移动光标到代码后
+        range.setStartAfter(codeElement);
+        range.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        // 同步内容到模型
+        this.syncContentToModel(blockId);
+      }
+    } else if (command === 'link') {
+      // 链接处理
+      const url = prompt('输入链接地址:', 'https://');
+      if (url) {
+        document.execCommand('createLink', false, url);
+        this.syncContentToModel(blockId);
+      }
+    } else {
+      // 使用 execCommand 处理常规格式
+      document.execCommand(command, false);
+      this.syncContentToModel(blockId);
+    }
+  }
+
+  /**
+   * 同步 DOM 内容到模型
+   */
+  private syncContentToModel(blockId: string): void {
+    if (!this.controller) return;
+
+    const blockElement = this.blockElements.get(blockId);
+    if (!blockElement) return;
+
+    const editableElement = blockElement.querySelector('[contenteditable="true"]') as HTMLElement;
+    if (!editableElement) return;
+
+    // 获取 HTML 内容（保留格式）
+    const html = editableElement.innerHTML;
+    const text = editableElement.textContent || '';
+
+    // 更新模型（暂时只更新纯文本，富文本需要解析 HTML）
+    this.controller.updateBlockDirect(blockId, { text, html });
   }
 
   /**

@@ -3,7 +3,7 @@
  */
 
 import type { EditorController } from '../logic/EditorController';
-import type { DOMCompiler } from '../renderer/dom/DOMCompiler';
+import type { Compiler } from '../renderer/types';
 
 /**
  * 插件接口
@@ -16,10 +16,9 @@ export interface Plugin {
 
 /**
  * 插件上下文
+ * 使用通用 Compiler 接口，支持 DOMCompiler 和 VDOMCompiler
  */
 export interface PluginContext {
   controller: EditorController;
-  compiler: DOMCompiler;
+  compiler: Compiler<HTMLElement, HTMLElement>;
 }
-
-

@@ -69,6 +69,9 @@ export interface Compiler<TElement = unknown, TContainer = unknown> {
   /** 获取块元素 */
   getBlockElement(blockId: string): TElement | null;
   
+  /** 获取容器元素 */
+  getContainer(): TContainer | null;
+  
   /** 注册块渲染器 */
   registerRenderer(renderer: BlockRenderer<TElement>): void;
   
