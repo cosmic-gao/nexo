@@ -8,8 +8,8 @@
  * 架构层次：
  * 1. 数据层：BlockDatabase - 管理块数据
  * 2. 组件层：BlockComponentRegistry - 管理块组件
- * 3. 渲染层：VDOMBlockRenderer - 使用虚拟 DOM 渲染块
- * 4. 编辑器层：VDOMBlockEditor - 整合所有层，提供统一 API
+ * 3. 渲染层：SimpleBlockRenderer - 直接DOM操作渲染块
+ * 4. 编辑器层：SimpleBlockEditor - 整合所有层，提供统一 API
  * 
  * 学习要点：
  * - 如何将虚拟 DOM 应用到实际项目
@@ -17,31 +17,32 @@
  * - 如何实现编辑器的增删改查功能
  */
 
-import { VDOMBlockRenderer, BlockComponentRegistry, ParagraphBlock, HeadingBlock, CodeBlock, QuoteBlock } from './vdom-renderer.js';
+import { SimpleBlockRenderer, BlockComponentRegistry, ParagraphBlock, HeadingBlock, CodeBlock, QuoteBlock } from './vdom-renderer.js';
 import { BlockDatabase, BlockData } from './block-editor.js';
 
 /**
- * 基于虚拟 DOM 的块编辑器
- * 
+ * 简化的块编辑器
+ *
  * 这是完整的块编辑器实现，整合了所有必要的组件。
- * 
+ * 移除了虚拟DOM依赖，使用直接DOM操作。
+ *
  * 主要功能：
  * - 创建、更新、删除块
- * - 使用虚拟 DOM 自动优化渲染
+ * - 直接DOM操作，性能更好
  * - 支持多种块类型（段落、标题、代码、引用等）
  * - 提供统一的 API 接口
  */
-export class VDOMBlockEditor {
+export class SimpleBlockEditor {
   private database: BlockDatabase;                    // 数据层：管理块数据
   private componentRegistry: BlockComponentRegistry; // 组件层：管理块组件
-  private renderer: VDOMBlockRenderer;               // 渲染层：使用虚拟 DOM 渲染
+  private renderer: SimpleBlockRenderer;             // 渲染层：直接DOM操作
   private container: HTMLElement;                    // 容器元素
 
   /**
    * 构造函数
-   * 
+   *
    * @param containerId - 容器元素的 ID
-   * 
+   *
    * 初始化流程：
    * 1. 查找容器元素
    * 2. 初始化各层（数据、组件、渲染）
@@ -57,15 +58,15 @@ export class VDOMBlockEditor {
     this.container = container;
 
     // ========== 初始化各层 ==========
-    
+
     // 数据层：管理块数据的存储和操作
     this.database = new BlockDatabase();
-    
+
     // 组件层：管理块类型到组件类的映射
     this.componentRegistry = new BlockComponentRegistry();
-    
-    // 渲染层：使用虚拟 DOM 渲染块
-    this.renderer = new VDOMBlockRenderer(this.container, this.componentRegistry);
+
+    // 渲染层：直接DOM操作渲染块
+    this.renderer = new SimpleBlockRenderer(this.container, this.componentRegistry);
 
     // ========== 注册默认组件 ==========
     // 将块类型名称映射到组件类
@@ -153,11 +154,12 @@ export class VDOMBlockEditor {
 
   /**
    * 设置事件监听器
-   * 
+   *
    * 处理用户的交互操作，包括：
    * - 点击选择块
    * - 输入处理（通过虚拟渲染器）
    * - 光标管理
+   * - Shift+Enter 块内换行
    */
   private setupEventListeners() {
     const virtualRenderer = this.renderer.getVirtualRenderer();
@@ -165,10 +167,10 @@ export class VDOMBlockEditor {
     // ========== 点击选择块 ==========
     this.container.addEventListener('click', (e) => {
       const target = e.target as HTMLElement;
-      
+
       // 查找最近的块元素
       const blockElement = target.closest('.block-node') as HTMLElement;
-      
+
       if (blockElement) {
         const blockId = blockElement.dataset.blockId;
         if (blockId) {
@@ -176,10 +178,10 @@ export class VDOMBlockEditor {
           this.container.querySelectorAll('.block-node').forEach(el => {
             el.classList.remove('selected', 'editing');
           });
-          
+
           // 添加当前块的选中状态
           blockElement.classList.add('selected', 'editing');
-          
+
           // 设置选择位置（用于输入和光标）
           const block = this.database.get(blockId);
           if (block) {
@@ -286,48 +288,43 @@ export class VDOMBlockEditor {
             virtualRenderer.setSelection(blockId, offset);
           }
         } else if (e.key === 'Enter') {
-          // Enter 键：在块内插入换行符
-          e.preventDefault();
-          fragment.insertText(offset, '\n');
-          const newText = fragment.getText();
-          this.database.update(blockId, { content: newText });
-          
-          // 更新渲染（虚拟DOM会自动优化）
-          this.renderer.updateBlock(this.database.get(blockId)!);
-          
-          // 等待DOM完全更新后再设置光标位置
-          // 使用三重 requestAnimationFrame 确保虚拟DOM和虚拟渲染器都完全同步
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              requestAnimationFrame(() => {
-                // 确保fragment已同步到DOM
-                const contentElement = this.container.querySelector(
-                  `.virtual-block-content[data-block-id="${blockId}"]`
-                ) as HTMLElement;
-                
-                if (contentElement) {
-                  const updatedFragment = virtualRenderer.getFragment(blockId);
-                  if (updatedFragment) {
-                    // 确保fragment的element已附加到DOM
-                    const fragmentElement = updatedFragment.getElement();
-                    const existingFragment = contentElement.querySelector('.rich-text-fragment');
-                    
-                    if (!existingFragment && fragmentElement) {
-                      contentElement.appendChild(fragmentElement);
-                    } else if (existingFragment && fragmentElement && existingFragment !== fragmentElement) {
-                      contentElement.replaceChild(fragmentElement, existingFragment);
-                    }
-                    
-                    // 重新渲染fragment以确保DOM正确
-                    updatedFragment.render();
-                  }
-                }
-                
-                // 设置光标位置（此时DOM应该已经完全更新）
-                virtualRenderer.setSelection(blockId, offset + 1);
-              });
+          if (e.shiftKey) {
+            // Shift + Enter：在当前块内插入换行符
+            fragment.insertText(offset, '\n');
+            const newText = fragment.getText();
+            this.database.update(blockId, { content: newText });
+
+            // 更新渲染
+            this.renderer.updateBlock(this.database.get(blockId)!);
+
+            // 设置光标位置
+            setTimeout(() => {
+              virtualRenderer.setSelection(blockId, offset + 1);
+            }, 0);
+          } else {
+            // Enter：在当前块下方创建新块
+            const rootIds = this.database.getRootIds();
+            const currentIndex = rootIds.indexOf(blockId);
+
+            // 创建一个新的段落块
+            const newBlock = this.database.create({
+              type: 'paragraph',
+              content: '',
+              children: [],
             });
-          });
+
+            // 在当前块之后插入新块
+            rootIds.splice(currentIndex + 1, 0, newBlock.id);
+            this.database.setRootIds(rootIds);
+
+            // 更新渲染
+            this.update();
+
+            // 聚焦到新块
+            setTimeout(() => {
+              virtualRenderer.setSelection(newBlock.id, 0);
+            }, 0);
+          }
         } else if (e.key === 'ArrowLeft') {
           // 左箭头：移动光标向左
           if (offset > 0) {
@@ -499,17 +496,17 @@ export class VDOMBlockEditor {
 }
 
 /**
- * 创建虚拟 DOM 块编辑器
- * 
+ * 创建简化块编辑器
+ *
  * 便捷函数，用于快速创建编辑器实例。
- * 
+ *
  * @param containerId - 容器元素的 ID
  * @returns 编辑器实例
- * 
+ *
  * 使用示例：
- * const editor = createVDOMBlockEditor('editor-container');
+ * const editor = createSimpleBlockEditor('editor-container');
  */
-export function createVDOMBlockEditor(containerId: string): VDOMBlockEditor {
-  return new VDOMBlockEditor(containerId);
+export function createSimpleBlockEditor(containerId: string): SimpleBlockEditor {
+  return new SimpleBlockEditor(containerId);
 }
 

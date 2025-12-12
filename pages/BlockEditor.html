@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>虚拟 DOM 块编辑器示例</title>
+    <title>简化块编辑器示例</title>
     <style>
         body {
             margin: 0;
@@ -73,20 +73,20 @@
 
 <body>
     <div class="info">
-        <h3>🚀 虚拟 DOM 版本编辑器</h3>
-        <p>这个编辑器使用虚拟 DOM 系统，提供更好的性能和可维护性。</p>
+        <h3>🚀 简化块编辑器</h3>
+        <p>这个编辑器使用直接DOM操作，提供更好的性能和更简单的架构。</p>
         <p><strong>核心特性：</strong></p>
         <ul>
-            <li>✅ <strong>虚拟 DOM 自动优化</strong>：只更新变化的部分，不重新渲染整个列表</li>
+            <li>✅ <strong>直接DOM操作</strong>：避免虚拟DOM开销，性能更优</li>
             <li>✅ <strong>组件化架构</strong>：每个块类型都是独立组件，易于扩展</li>
-            <li>✅ <strong>声明式编程</strong>：使用 h() 函数声明式描述 UI，代码更清晰</li>
+            <li>✅ <strong>简单直接</strong>：代码更易理解和维护</li>
             <li>✅ <strong>类型安全</strong>：完整的 TypeScript 类型支持</li>
-            <li>✅ <strong>性能优化</strong>：使用 diff 算法最小化 DOM 操作</li>
+            <li>✅ <strong>虚拟渲染器</strong>：保留文本处理和光标管理的虚拟渲染器</li>
         </ul>
         <p><strong>学习要点：</strong></p>
         <ul>
-            <li>查看 <code>app/virtual-dom.ts</code> 了解虚拟 DOM 核心实现</li>
-            <li>查看 <code>app/vdom-renderer.ts</code> 了解如何应用到块编辑器</li>
+            <li>查看 <code>app/virtual-renderer.ts</code> 了解虚拟渲染器实现</li>
+            <li>查看 <code>app/vdom-renderer.ts</code> 了解直接DOM操作的渲染器</li>
             <li>查看 <code>app/vdom-block-editor-example.ts</code> 了解完整使用方式</li>
         </ul>
     </div>
@@ -103,15 +103,15 @@
 
     <div id="editor"></div>
     <script type="module">
-        import { createVDOMBlockEditor } from '../app/vdom-block-editor-example.ts';
+        import { createSimpleBlockEditor } from '../app/vdom-block-editor-example.ts';
         
         // 创建编辑器实例
         let editor;
         
         window.addEventListener('DOMContentLoaded', () => {
-            editor = createVDOMBlockEditor('editor');
-            console.log('虚拟 DOM 块编辑器已初始化', editor);
-            
+            editor = createSimpleBlockEditor('editor');
+            console.log('简化块编辑器已初始化', editor);
+
             // 将编辑器暴露到全局，方便控制台操作
             window.editor = editor;
         });
@@ -119,7 +119,7 @@
         // 操作函数
         function addParagraph() {
             if (editor) {
-                editor.insertBlock('paragraph', '这是一个新段落，由虚拟 DOM 渲染。');
+                editor.insertBlock('paragraph', '这是一个新段落，由直接DOM操作渲染。');
             }
         }
 
@@ -141,7 +141,7 @@
 
         function addQuote() {
             if (editor) {
-                editor.insertBlock('quote', '这是一段引用文字，展示虚拟 DOM 的渲染能力。');
+                editor.insertBlock('quote', '这是一段引用文字，展示直接DOM操作的渲染能力。');
             }
         }
 
@@ -150,7 +150,7 @@
                 const blocks = editor.getDatabase().getAllBlocks();
                 if (blocks.length > 0) {
                     editor.updateBlock(blocks[0].id, { 
-                        content: '✅ 内容已更新！虚拟 DOM 自动优化了这次更新，只更新了变化的文本，没有重新渲染整个块。' 
+                        content: '✅ 内容已更新！直接DOM操作快速更新了这次更改。' 
                     });
                 }
             }

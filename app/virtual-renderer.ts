@@ -579,17 +579,18 @@ export class InputInterceptor {
   }
 
   private shouldIntercept(e: KeyboardEvent): boolean {
-    // 不拦截功能键
+    // 不拦截功能键（除了特定的组合键）
     if (e.ctrlKey || e.metaKey || e.altKey) {
-      // 但拦截一些组合键
+      // 拦截一些组合键
       if ((e.ctrlKey || e.metaKey) && (e.key === 'v' || e.key === 'a' || e.key === 'c' || e.key === 'x')) {
         return true;
       }
+      // 不拦截其他的 ctrl/meta/alt 组合键
       return false;
     }
 
-    // 拦截所有可打印字符和编辑键
-    return e.key.length === 1 || 
+    // 拦截所有可打印字符和编辑键，包括带修饰键的 Enter
+    return e.key.length === 1 ||
            ['Backspace', 'Delete', 'Enter', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key);
   }
 
