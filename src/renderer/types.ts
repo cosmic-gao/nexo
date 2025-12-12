@@ -3,8 +3,9 @@
  * 定义编译器接口和渲染上下文
  */
 
-import type { Block, BlockType, Document, Selection } from '../model/types';
+import type { Block, BlockType, Document } from '../model/types';
 import type { EditorController } from '../logic/EditorController';
+import type { SimpleSelection, SelectionPoint } from '../logic/SelectionManager';
 
 // ============================================
 // Compiler Interface - 编译器接口
@@ -17,7 +18,7 @@ export interface RenderContext<TElement = unknown> {
   /** 编辑器控制器 */
   controller: EditorController;
   /** 当前选区 */
-  selection: Selection | null;
+  selection: SimpleSelection | null;
   /** 父元素 */
   parent?: TElement;
   /** 块索引 */
@@ -83,10 +84,10 @@ export interface Compiler<TElement = unknown, TContainer = unknown> {
  */
 export interface SelectionAdapter {
   /** 从平台选区同步到模型 */
-  syncFromPlatform(): Selection | null;
+  syncFromPlatform(): SimpleSelection | null;
   
   /** 从模型同步到平台选区 */
-  syncToPlatform(selection: Selection): void;
+  syncToPlatform(selection: SimpleSelection): void;
   
   /** 聚焦到块 */
   focusBlock(blockId: string): void;
@@ -118,5 +119,3 @@ export interface RendererPlugin<TElement = unknown> {
   init(compiler: Compiler<TElement>): void;
   destroy(): void;
 }
-
-

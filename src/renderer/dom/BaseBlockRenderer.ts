@@ -56,6 +56,11 @@ export abstract class BaseBlockRenderer implements BlockRenderer<HTMLElement> {
       code: '代码',
       divider: '',
       image: '',
+      toggle: '折叠块',
+      callout: '提示',
+      table: '',
+      column: '',
+      columnItem: '',
     };
     return placeholders[type] || '';
   }

@@ -3,7 +3,7 @@
  * Web DOM 平台的编译器实现
  */
 
-import type { Block, Document, Selection } from '../../model/types';
+import type { Block, Document } from '../../model/types';
 import type { EditorController } from '../../logic/EditorController';
 import type { Compiler, BlockRenderer, RenderContext, SelectionAdapter } from '../types';
 import { DOMSelectionAdapter } from './DOMSelectionAdapter';
@@ -170,6 +170,21 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
       this.handleArrowKey(e, blockId);
       return;
     }
+
+    // Tab - 缩进/取消缩进
+    if (e.key === 'Tab') {
+      // 代码块中允许 Tab 输入
+      if (block.type === 'code') {
+        return;
+      }
+      e.preventDefault();
+      if (e.shiftKey) {
+        this.handleOutdent(blockId);
+      } else {
+        this.handleIndent(blockId);
+      }
+      return;
+    }
   }
 
   /**
@@ -301,6 +316,72 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   }
 
   /**
+   * 处理缩进（Tab）
+   */
+  private handleIndent(blockId: string): void {
+    if (!this.controller) return;
+    
+    const doc = this.controller.getDocument();
+    const block = doc.blocks[blockId];
+    if (!block) return;
+
+    // 获取前一个兄弟块
+    const siblings = block.parentId 
+      ? doc.blocks[block.parentId]?.childrenIds || []
+      : doc.rootIds;
+    const index = siblings.indexOf(blockId);
+    
+    if (index > 0) {
+      const prevSiblingId = siblings[index - 1];
+      const prevSibling = doc.blocks[prevSiblingId];
+      
+      if (prevSibling) {
+        // 移动到前一个兄弟的子块末尾
+        this.controller.moveBlock(blockId, prevSiblingId, prevSibling.childrenIds.length);
+        
+        // 重新渲染
+        this.render(this.controller.getDocument());
+        
+        // 恢复焦点
+        requestAnimationFrame(() => {
+          this.focus(blockId);
+        });
+      }
+    }
+  }
+
+  /**
+   * 处理取消缩进（Shift+Tab）
+   */
+  private handleOutdent(blockId: string): void {
+    if (!this.controller) return;
+    
+    const doc = this.controller.getDocument();
+    const block = doc.blocks[blockId];
+    if (!block || !block.parentId) return; // 已经是根级，无法取消缩进
+
+    const parent = doc.blocks[block.parentId];
+    if (!parent) return;
+
+    // 获取父块的索引
+    const parentSiblings = parent.parentId
+      ? doc.blocks[parent.parentId]?.childrenIds || []
+      : doc.rootIds;
+    const parentIndex = parentSiblings.indexOf(parent.id);
+
+    // 移动到父块的下一个位置
+    this.controller.moveBlock(blockId, parent.parentId, parentIndex + 1);
+    
+    // 重新渲染
+    this.render(this.controller.getDocument());
+    
+    // 恢复焦点
+    requestAnimationFrame(() => {
+      this.focus(blockId);
+    });
+  }
+
+  /**
    * 处理选区变化
    */
   private handleSelectionChange(): void {
@@ -387,14 +468,61 @@ export class DOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     this.container.innerHTML = '';
     this.blockElements.clear();
 
-    // 渲染所有块
-    doc.rootBlockIds.forEach((blockId, index) => {
+    // 递归渲染所有块（包括子块）
+    doc.rootIds.forEach((blockId: string, index: number) => {
       const block = doc.blocks[blockId];
       if (block) {
-        const element = this.renderBlock(block, { ...context, index });
+        const element = this.renderBlockWithChildren(block, doc, { ...context, index }, 0);
         this.container!.appendChild(element);
       }
     });
+  }
+
+  /**
+   * 递归渲染块及其子块
+   */
+  private renderBlockWithChildren(
+    block: Block,
+    doc: Document,
+    context: RenderContext<HTMLElement>,
+    depth: number
+  ): HTMLElement {
+    const element = this.renderBlock(block, context);
+    
+    // 设置缩进深度
+    element.style.marginLeft = depth > 0 ? `${depth * 24}px` : '';
+    element.dataset.depth = String(depth);
+
+    // 渲染子块
+    if (block.childrenIds.length > 0) {
+      const childrenContainer = document.createElement('div');
+      childrenContainer.className = 'nexo-block-children';
+      
+      block.childrenIds.forEach((childId, childIndex) => {
+        const childBlock = doc.blocks[childId];
+        if (childBlock) {
+          const childElement = this.renderBlockWithChildren(
+            childBlock,
+            doc,
+            { ...context, index: childIndex },
+            depth + 1
+          );
+          childrenContainer.appendChild(childElement);
+        }
+      });
+
+      // 子块容器添加到块元素后面（不是内部）
+      element.after(childrenContainer);
+      
+      // 返回一个包装器包含块和子块
+      const wrapper = document.createElement('div');
+      wrapper.className = 'nexo-block-with-children';
+      wrapper.appendChild(element);
+      wrapper.appendChild(childrenContainer);
+      return wrapper;
+    }
+    
+    return element;
   }
 
   /**

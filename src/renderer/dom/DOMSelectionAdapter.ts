@@ -3,9 +3,20 @@
  * DOM 平台的选区适配器
  */
 
-import type { Selection, SelectionPoint } from '../../model/types';
 import type { EditorController } from '../../logic/EditorController';
 import type { SelectionAdapter } from '../types';
+
+// 使用 logic 层的简化选区类型
+export interface SelectionPoint {
+  blockId: string;
+  offset: number;
+}
+
+export interface SimpleSelection {
+  anchor: SelectionPoint;
+  focus: SelectionPoint;
+  isCollapsed: boolean;
+}
 
 export class DOMSelectionAdapter implements SelectionAdapter {
   private container: HTMLElement;
@@ -19,7 +30,7 @@ export class DOMSelectionAdapter implements SelectionAdapter {
   /**
    * 从 DOM 选区同步到模型
    */
-  syncFromPlatform(): Selection | null {
+  syncFromPlatform(): SimpleSelection | null {
     const domSelection = window.getSelection();
     if (!domSelection || domSelection.rangeCount === 0) {
       return null;
@@ -54,7 +65,7 @@ export class DOMSelectionAdapter implements SelectionAdapter {
   /**
    * 从模型同步到 DOM 选区
    */
-  syncToPlatform(selection: Selection): void {
+  syncToPlatform(selection: SimpleSelection): void {
     const anchorBlock = this.container.querySelector(`[data-block-id="${selection.anchor.blockId}"]`);
     const focusBlock = this.container.querySelector(`[data-block-id="${selection.focus.blockId}"]`);
 
@@ -199,5 +210,3 @@ export class DOMSelectionAdapter implements SelectionAdapter {
     return { node: element, offset: 0 };
   }
 }
-
-

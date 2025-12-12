@@ -281,7 +281,7 @@ export class DragHandlePlugin implements Plugin {
       const position = (this.dropIndicator as any)._position;
 
       if (targetId && position && targetId !== this.dragSourceId) {
-        this.context.controller.moveBlock(this.dragSourceId, targetId, position);
+        this.context.controller.moveBlockRelative(this.dragSourceId, targetId, position);
 
         // 重新排序 DOM
         const blocks = this.context.controller.getBlocks();

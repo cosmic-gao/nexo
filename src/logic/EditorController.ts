@@ -3,11 +3,11 @@
  * 平台无关的编辑器核心逻辑
  */
 
-import type { Document, Block, BlockType, BlockData, Selection } from '../model/types';
+import type { Document, Block, BlockType, BlockData, EventType, EditorEvent } from '../model/types';
 import * as DocOps from '../model/Document';
 import { EventBus } from './EventBus';
 import { CommandManager, Commands } from './CommandManager';
-import { SelectionManager } from './SelectionManager';
+import { SelectionManager, SimpleSelection } from './SelectionManager';
 
 export interface EditorControllerConfig {
   initialDocument?: Document;
@@ -123,13 +123,37 @@ export class EditorController {
     );
   }
 
-  moveBlock(blockId: string, targetBlockId: string, position: 'before' | 'after'): void {
-    const cmd = Commands.moveBlock(blockId, targetBlockId, position);
+  moveBlock(blockId: string, newParentId: string | null, newIndex: number): void {
+    const cmd = Commands.moveBlock(blockId, newParentId, newIndex);
     this.commandManager.execute(
       cmd.type,
       cmd.execute,
       cmd.createInverse
     );
+  }
+
+  /**
+   * 移动块到目标块的前/后（兼容旧 API）
+   */
+  moveBlockRelative(blockId: string, targetBlockId: string, position: 'before' | 'after'): void {
+    const targetBlock = this.getBlock(targetBlockId);
+    if (!targetBlock) return;
+
+    const parentId = targetBlock.parentId;
+    let targetIndex = DocOps.getBlockIndex(this.document, targetBlockId);
+    
+    if (position === 'after') {
+      targetIndex += 1;
+    }
+
+    // 如果源块在目标之前，移动后索引需要调整
+    const sourceIndex = DocOps.getBlockIndex(this.document, blockId);
+    const sourceBlock = this.getBlock(blockId);
+    if (sourceBlock?.parentId === parentId && sourceIndex < targetIndex) {
+      targetIndex -= 1;
+    }
+
+    this.moveBlock(blockId, parentId, targetIndex);
   }
 
   splitBlock(blockId: string, offset: number): Block | null {
@@ -157,11 +181,11 @@ export class EditorController {
   // Selection Operations
   // ============================================
 
-  getSelection(): Selection | null {
+  getSelection(): SimpleSelection | null {
     return this.selectionManager.getSelection();
   }
 
-  setSelection(selection: Selection): void {
+  setSelection(selection: SimpleSelection | null): void {
     this.selectionManager.setSelection(selection);
   }
 
@@ -213,16 +237,21 @@ export class EditorController {
   // Event Operations
   // ============================================
 
-  on<T>(type: import('../model/types').EventType, handler: (event: import('../model/types').EditorEvent<T>) => void): () => void {
+  on<T>(type: EventType, handler: (event: EditorEvent<T>) => void): () => void {
     return this.eventBus.on(type, handler);
   }
 
-  off<T>(type: import('../model/types').EventType, handler: (event: import('../model/types').EditorEvent<T>) => void): void {
+  off<T>(type: EventType, handler: (event: EditorEvent<T>) => void): void {
     this.eventBus.off(type, handler);
   }
 
-  emit<T>(type: import('../model/types').EventType, payload: T): void {
+  emit<T>(type: EventType, payload: T): void {
     this.eventBus.emit(type, payload);
+  }
+
+  // 允许发送自定义事件
+  emitCustom<T>(type: string, payload: T): void {
+    this.eventBus.emit(type as EventType, payload);
   }
 
   // ============================================
@@ -247,5 +276,3 @@ export class EditorController {
     this.commandManager.clear();
   }
 }
-
-

@@ -3,8 +3,7 @@
  */
 
 export * from './DOMCompiler';
-export * from './DOMSelectionAdapter';
+export { DOMSelectionAdapter } from './DOMSelectionAdapter';
 export * from './BaseBlockRenderer';
 export * from './renderers';
-
 

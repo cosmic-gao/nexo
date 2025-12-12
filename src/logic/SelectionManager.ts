@@ -1,11 +1,29 @@
 /**
  * Logic Layer - SelectionManager 选区管理器
- * 平台无关的选区状态管理
+ * 平台无关的选区状态管理（兼容层）
  */
 
-import type { Selection, SelectionPoint, Document } from '../model/types';
+import type { Document, Block } from '../model/types';
+import type { 
+  Selection as AbstractSelection, 
+  TextPoint,
+  CaretSelection,
+} from '../selection/types';
 import { EventBus } from './EventBus';
 import * as DocOps from '../model/Document';
+
+// 简化的选区点（兼容旧代码）
+export interface SelectionPoint {
+  blockId: string;
+  offset: number;
+}
+
+// 简化的选区（兼容旧代码）
+export interface SimpleSelection {
+  anchor: SelectionPoint;
+  focus: SelectionPoint;
+  isCollapsed: boolean;
+}
 
 export interface SelectionContext {
   getDocument: () => Document;
@@ -13,7 +31,7 @@ export interface SelectionContext {
 }
 
 export class SelectionManager {
-  private selection: Selection | null = null;
+  private selection: SimpleSelection | null = null;
   private context: SelectionContext;
 
   constructor(context: SelectionContext) {
@@ -23,14 +41,14 @@ export class SelectionManager {
   /**
    * 获取当前选区
    */
-  getSelection(): Selection | null {
+  getSelection(): SimpleSelection | null {
     return this.selection;
   }
 
   /**
    * 设置选区
    */
-  setSelection(selection: Selection | null): void {
+  setSelection(selection: SimpleSelection | null): void {
     const previous = this.selection;
     this.selection = selection;
     
@@ -66,7 +84,7 @@ export class SelectionManager {
   setCursorToEnd(blockId: string): void {
     const doc = this.context.getDocument();
     const block = DocOps.getBlock(doc, blockId);
-    const textLength = block?.data.text?.length || 0;
+    const textLength = DocOps.getBlockPlainText(doc, blockId).length;
     this.setCursor(blockId, textLength);
   }
 
@@ -100,8 +118,7 @@ export class SelectionManager {
     if (!this.selection || !this.selection.isCollapsed) return false;
     
     const doc = this.context.getDocument();
-    const block = DocOps.getBlock(doc, this.selection.anchor.blockId);
-    const textLength = block?.data.text?.length || 0;
+    const textLength = DocOps.getBlockPlainText(doc, this.selection.anchor.blockId).length;
     
     return this.selection.anchor.offset === textLength;
   }
@@ -120,7 +137,7 @@ export class SelectionManager {
     if (!this.selection) return false;
 
     const doc = this.context.getDocument();
-    const prevBlock = DocOps.getPreviousBlock(doc, this.selection.anchor.blockId);
+    const prevBlock = DocOps.getPreviousSibling(doc, this.selection.anchor.blockId);
     
     if (prevBlock) {
       this.setCursorToEnd(prevBlock.id);
@@ -136,7 +153,7 @@ export class SelectionManager {
     if (!this.selection) return false;
 
     const doc = this.context.getDocument();
-    const nextBlock = DocOps.getNextBlock(doc, this.selection.anchor.blockId);
+    const nextBlock = DocOps.getNextSibling(doc, this.selection.anchor.blockId);
     
     if (nextBlock) {
       this.setCursorToStart(nextBlock.id);
@@ -153,9 +170,77 @@ export class SelectionManager {
   }
 
   /**
+   * 转换为抽象选区
+   */
+  toAbstractSelection(): AbstractSelection | null {
+    if (!this.selection) return null;
+
+    if (this.selection.isCollapsed) {
+      return {
+        type: 'caret',
+        point: {
+          blockId: this.selection.anchor.blockId,
+          itemIndex: 0,
+          charOffset: this.selection.anchor.offset,
+        },
+      };
+    }
+
+    return {
+      type: 'text-range',
+      anchor: {
+        blockId: this.selection.anchor.blockId,
+        itemIndex: 0,
+        charOffset: this.selection.anchor.offset,
+      },
+      focus: {
+        blockId: this.selection.focus.blockId,
+        itemIndex: 0,
+        charOffset: this.selection.focus.offset,
+      },
+      isForward: true,
+    };
+  }
+
+  /**
+   * 从抽象选区设置
+   */
+  fromAbstractSelection(sel: AbstractSelection | null): void {
+    if (!sel) {
+      this.setSelection(null);
+      return;
+    }
+
+    switch (sel.type) {
+      case 'caret':
+        this.setCursor(sel.point.blockId, sel.point.charOffset);
+        break;
+      case 'text-range':
+        this.setSelection({
+          anchor: { blockId: sel.anchor.blockId, offset: sel.anchor.charOffset },
+          focus: { blockId: sel.focus.blockId, offset: sel.focus.charOffset },
+          isCollapsed: false,
+        });
+        break;
+      case 'cross-block':
+        this.setSelection({
+          anchor: { blockId: sel.anchor.blockId, offset: sel.anchor.charOffset },
+          focus: { blockId: sel.focus.blockId, offset: sel.focus.charOffset },
+          isCollapsed: false,
+        });
+        break;
+      case 'block':
+        if (sel.blockIds.length > 0) {
+          this.setCursor(sel.blockIds[0], 0);
+        }
+        break;
+    }
+  }
+
+  /**
    * 检查选区是否改变
    */
-  private hasSelectionChanged(a: Selection | null, b: Selection | null): boolean {
+  private hasSelectionChanged(a: SimpleSelection | null, b: SimpleSelection | null): boolean {
     if (a === b) return false;
     if (!a || !b) return true;
     
@@ -167,5 +252,3 @@ export class SelectionManager {
     );
   }
 }
-
-

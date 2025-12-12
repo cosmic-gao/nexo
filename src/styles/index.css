@@ -169,6 +169,57 @@
   opacity: 0.5;
 }
 
+/* ============================================
+   嵌套块结构
+   ============================================ */
+.nexo-block-with-children {
+  position: relative;
+}
+
+.nexo-block-children {
+  position: relative;
+  padding-left: 0;
+}
+
+/* 嵌套指示线 */
+.nexo-block-children::before {
+  content: '';
+  position: absolute;
+  left: 12px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--nexo-border-color);
+  border-radius: 1px;
+  opacity: 0.5;
+}
+
+.nexo-block-children:hover::before {
+  background: var(--nexo-accent);
+  opacity: 0.7;
+}
+
+/* 深度标记样式 */
+.nexo-block[data-depth="1"] {
+  margin-left: 24px;
+}
+
+.nexo-block[data-depth="2"] {
+  margin-left: 48px;
+}
+
+.nexo-block[data-depth="3"] {
+  margin-left: 72px;
+}
+
+.nexo-block[data-depth="4"] {
+  margin-left: 96px;
+}
+
+.nexo-block[data-depth="5"] {
+  margin-left: 120px;
+}
+
 /* Drop Indicator */
 .nexo-drop-indicator {
   height: 3px;
