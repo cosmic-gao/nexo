@@ -2,6 +2,7 @@
  * Renderer Layer - VDOMCompiler
  * 基于虚拟 DOM 的编译器实现
  * 使用 diff + patch 实现增量更新
+ * 支持块级懒加载优化大文档性能
  */
 
 import type { Block, Document, BlockType } from '../../model/types';
@@ -15,6 +16,17 @@ import { DOMSelectionAdapter } from './DOMSelectionAdapter';
 import { detectMarkdownShortcut, extractCodeLanguage } from './MarkdownShortcuts';
 import { DirtyTracker } from '../vdom/DirtyTracker';
 import { BlockRenderCache } from '../vdom/MemoizedBlock';
+import { LazyBlockManager, type VisibleRange, type LazyBlockConfig } from '../vdom/LazyBlock';
+
+/**
+ * VDOMCompiler 配置
+ */
+export interface VDOMCompilerOptions {
+  /** 懒加载配置 */
+  lazyLoading?: Partial<LazyBlockConfig>;
+  /** 是否启用懒加载（默认：文档超过 50 个块时启用） */
+  lazyLoadingThreshold?: number;
+}
 
 /**
  * 基于虚拟 DOM 的编译器
@@ -45,6 +57,19 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   private selectionAnchorBlockId: string | null = null;
   private isMouseSelecting: boolean = false;
 
+  // 懒加载
+  private lazyManager: LazyBlockManager | null = null;
+  private visibleRange: VisibleRange | null = null;
+  private options: VDOMCompilerOptions;
+  private flatBlockIds: string[] = []; // 缓存扁平化的块 ID 列表
+
+  constructor(options: VDOMCompilerOptions = {}) {
+    this.options = {
+      lazyLoadingThreshold: 50,
+      ...options,
+    };
+  }
+
   /**
    * 初始化编译器
    */
@@ -59,6 +84,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     container.setAttribute('aria-multiline', 'true');
     
     this.bindEvents();
+    this.initLazyLoading(container);
     
     // 监听文档变化
     controller.on('document:changed', () => {
@@ -74,13 +100,60 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     // 撤销/重做时强制完整重新渲染
     controller.on('command:undone', () => {
       this.renderCache.clear();
+      this.lazyManager?.clearMeasurements();
       this.isFirstRender = true;
     });
 
     controller.on('command:redone', () => {
       this.renderCache.clear();
+      this.lazyManager?.clearMeasurements();
       this.isFirstRender = true;
     });
+  }
+
+  /**
+   * 初始化懒加载
+   */
+  private initLazyLoading(container: HTMLElement): void {
+    this.lazyManager = new LazyBlockManager({
+      bufferSize: 5,
+      estimatedBlockHeight: 40,
+      enabled: false, // 初始禁用，根据文档大小动态启用
+      ...this.options.lazyLoading,
+    });
+
+    this.lazyManager.init(container, () => {
+      // 可视范围变化时重新渲染
+      this.scheduleRender();
+    });
+  }
+
+  /**
+   * 检查是否应该启用懒加载
+   */
+  private shouldEnableLazyLoading(blockCount: number): boolean {
+    const threshold = this.options.lazyLoadingThreshold ?? 50;
+    return blockCount >= threshold;
+  }
+
+  /**
+   * 获取扁平化的块 ID 列表
+   */
+  private getFlatBlockIds(doc: Document): string[] {
+    const result: string[] = [];
+    
+    const collectIds = (blockIds: string[]) => {
+      for (const blockId of blockIds) {
+        result.push(blockId);
+        const block = doc.blocks[blockId];
+        if (block && block.childrenIds.length > 0) {
+          collectIds(block.childrenIds);
+        }
+      }
+    };
+    
+    collectIds(doc.rootIds);
+    return result;
   }
 
   /**
@@ -130,6 +203,22 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const savedSelection = this.selectionAdapter?.syncFromPlatform();
     const activeBlockId = this.focusedBlockId;
 
+    // 更新扁平化块 ID 列表
+    this.flatBlockIds = this.getFlatBlockIds(doc);
+    
+    // 动态启用/禁用懒加载
+    const enableLazy = this.shouldEnableLazyLoading(this.flatBlockIds.length);
+    if (this.lazyManager) {
+      this.lazyManager.setConfig({ enabled: enableLazy });
+      
+      // 计算可视范围
+      if (enableLazy) {
+        this.visibleRange = this.lazyManager.calculateVisibleRange(this.flatBlockIds);
+      } else {
+        this.visibleRange = null;
+      }
+    }
+
     // 构建虚拟 DOM 树
     const newTree = this.buildVirtualTree(doc);
 
@@ -152,6 +241,11 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     // 更新块元素映射
     this.updateBlockElementsMap();
     
+    // 更新懒加载测量
+    if (this.lazyManager && enableLazy) {
+      this.lazyManager.measureBlocks(this.blockElements);
+    }
+    
     // 清除脏标记
     this.dirtyTracker.clear();
 
@@ -173,17 +267,79 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
    */
   private buildVirtualTree(doc: Document): VNode {
     const children: VNode[] = [];
+    const useLazyLoading = this.visibleRange && this.lazyManager?.isEnabled();
 
-    // 递归构建所有块
-    doc.rootIds.forEach((blockId, index) => {
-      const block = doc.blocks[blockId];
-      if (block) {
-        const blockVNode = this.buildBlockVNode(block, doc, 0, index);
-        children.push(blockVNode);
+    if (useLazyLoading && this.visibleRange) {
+      // 懒加载模式：只渲染可视范围内的块
+      const { startIndex, endIndex, offsetTop, totalHeight } = this.visibleRange;
+      
+      // 上方占位符
+      if (offsetTop > 0) {
+        children.push(this.createPlaceholder('top', offsetTop));
       }
-    });
+
+      // 渲染可视范围内的根块
+      for (let i = startIndex; i <= endIndex && i < this.flatBlockIds.length; i++) {
+        const blockId = this.flatBlockIds[i];
+        const block = doc.blocks[blockId];
+        
+        // 只渲染根块（非嵌套块由父块渲染）
+        if (block && !block.parentId) {
+          const rootIndex = doc.rootIds.indexOf(blockId);
+          if (rootIndex !== -1) {
+            const blockVNode = this.buildBlockVNode(block, doc, 0, rootIndex);
+            children.push(blockVNode);
+          }
+        }
+      }
+
+      // 下方占位符
+      const renderedHeight = this.calculateRenderedHeight(startIndex, endIndex);
+      const bottomHeight = totalHeight - offsetTop - renderedHeight;
+      if (bottomHeight > 0) {
+        children.push(this.createPlaceholder('bottom', bottomHeight));
+      }
+    } else {
+      // 普通模式：渲染所有块
+      doc.rootIds.forEach((blockId, index) => {
+        const block = doc.blocks[blockId];
+        if (block) {
+          const blockVNode = this.buildBlockVNode(block, doc, 0, index);
+          children.push(blockVNode);
+        }
+      });
+    }
 
     return h('div', { className: 'nexo-blocks-container' }, ...children);
+  }
+
+  /**
+   * 创建占位符
+   */
+  private createPlaceholder(position: 'top' | 'bottom', height: number): VNode {
+    return h('div', {
+      className: `nexo-lazy-placeholder nexo-lazy-placeholder-${position}`,
+      style: `height: ${height}px; pointer-events: none;`,
+      'data-placeholder': position,
+      key: `placeholder-${position}`,
+    });
+  }
+
+  /**
+   * 计算已渲染块的高度
+   */
+  private calculateRenderedHeight(startIndex: number, endIndex: number): number {
+    let height = 0;
+    for (let i = startIndex; i <= endIndex && i < this.flatBlockIds.length; i++) {
+      const blockId = this.flatBlockIds[i];
+      const element = this.blockElements.get(blockId);
+      if (element) {
+        height += element.offsetHeight;
+      } else {
+        height += 40; // 估计高度
+      }
+    }
+    return height;
   }
 
   /**
@@ -968,26 +1124,6 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     this.blockElements.forEach((element) => {
       element.classList.remove('nexo-block-selected');
     });
-  }
-
-  /**
-   * 获取扁平化的块 ID 列表
-   */
-  private getFlatBlockIds(doc: Document): string[] {
-    const result: string[] = [];
-    
-    const collectIds = (blockIds: string[]) => {
-      for (const blockId of blockIds) {
-        result.push(blockId);
-        const block = doc.blocks[blockId];
-        if (block && block.childrenIds.length > 0) {
-          collectIds(block.childrenIds);
-        }
-      }
-    };
-    
-    collectIds(doc.rootIds);
-    return result;
   }
 
   /**

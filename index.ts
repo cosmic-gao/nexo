@@ -82,28 +82,137 @@ document.addEventListener('DOMContentLoaded', () => {
   // 3. 初始化编译器
   compiler.init(container, controller);
 
-  // 4. 添加初始内容
+  // 4. 添加初始内容（演示所有功能）
   const initialBlocks = [
-    { type: 'heading1' as const, data: { text: '欢迎使用 Nexo Editor' } },
-    { type: 'paragraph' as const, data: { text: '这是一个采用跨平台编译器架构的块编辑器。' } },
-    { type: 'heading2' as const, data: { text: '🎯 快捷操作' } },
-    { type: 'paragraph' as const, data: { text: '输入 # 空格 创建标题，输入 - 空格 创建列表' } },
-    { type: 'paragraph' as const, data: { text: '选中文字后按 Ctrl+B 加粗，Ctrl+I 斜体' } },
-    { type: 'paragraph' as const, data: { text: '按 Tab 缩进，Shift+Tab 取消缩进' } },
+    // ========== 欢迎区域 ==========
+    { type: 'heading1' as const, data: { text: '🚀 Nexo Block Editor' } },
+    { type: 'paragraph' as const, data: { text: '一个现代化的块编辑器，采用跨平台编译器架构，支持虚拟 DOM 增量渲染、块级懒加载、多块选择等特性。' } },
+    
     { type: 'divider' as const, data: {} },
-    { type: 'heading2' as const, data: { text: '📐 架构特性' } },
-    { type: 'bulletList' as const, data: { text: 'Model 层 - 树形块结构 + 富文本模型' } },
-    { type: 'bulletList' as const, data: { text: 'Logic 层 - Operation-based 变更系统' } },
-    { type: 'bulletList' as const, data: { text: 'Renderer 层 - 虚拟 DOM 增量更新' } },
+    
+    // ========== 快捷键指南 ==========
+    { type: 'heading2' as const, data: { text: '⌨️ 快捷键' } },
+    
+    { type: 'heading3' as const, data: { text: '编辑操作' } },
+    { type: 'bulletList' as const, data: { text: 'Enter - 创建新块' } },
+    { type: 'bulletList' as const, data: { text: 'Backspace - 删除/合并块' } },
+    { type: 'bulletList' as const, data: { text: 'Tab - 缩进块（嵌套）' } },
+    { type: 'bulletList' as const, data: { text: 'Shift + Tab - 取消缩进' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + Z - 撤销' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + Shift + Z - 重做' } },
+    
+    { type: 'heading3' as const, data: { text: '富文本格式' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + B - 加粗' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + I - 斜体' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + U - 下划线' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + Shift + S - 删除线' } },
+    
+    { type: 'heading3' as const, data: { text: '多块选择' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + 点击 - 切换选择单个块' } },
+    { type: 'bulletList' as const, data: { text: 'Shift + 点击 - 选择范围内的块' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + A - 全选所有块' } },
+    { type: 'bulletList' as const, data: { text: 'Delete / Backspace - 删除选中块' } },
+    { type: 'bulletList' as const, data: { text: 'Ctrl + C / X - 复制/剪切选中块' } },
+    
     { type: 'divider' as const, data: {} },
-    { type: 'heading3' as const, data: { text: '✨ 试试 Markdown 快捷输入' } },
-    { type: 'todoList' as const, data: { text: '# 标题 / ## 二级标题 / ### 三级标题', checked: true } },
-    { type: 'todoList' as const, data: { text: '- 或 * 无序列表', checked: true } },
-    { type: 'todoList' as const, data: { text: '1. 有序列表', checked: true } },
-    { type: 'todoList' as const, data: { text: '[] 待办事项', checked: true } },
-    { type: 'todoList' as const, data: { text: '> 引用块', checked: true } },
-    { type: 'todoList' as const, data: { text: '``` 代码块', checked: true } },
-    { type: 'todoList' as const, data: { text: '--- 分割线', checked: true } },
+    
+    // ========== Markdown 快捷输入 ==========
+    { type: 'heading2' as const, data: { text: '✨ Markdown 快捷输入' } },
+    { type: 'paragraph' as const, data: { text: '在空行输入以下内容后按空格，自动转换为对应块类型：' } },
+    
+    { type: 'quote' as const, data: { text: '# 一级标题 | ## 二级标题 | ### 三级标题' } },
+    { type: 'quote' as const, data: { text: '- 或 * 无序列表 | 1. 有序列表 | [] 待办事项' } },
+    { type: 'quote' as const, data: { text: '> 引用 | ``` 代码块 | --- 分割线' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 块类型展示 ==========
+    { type: 'heading2' as const, data: { text: '📦 支持的块类型' } },
+    
+    { type: 'heading3' as const, data: { text: '标题' } },
+    { type: 'heading1' as const, data: { text: '这是一级标题 (H1)' } },
+    { type: 'heading2' as const, data: { text: '这是二级标题 (H2)' } },
+    { type: 'heading3' as const, data: { text: '这是三级标题 (H3)' } },
+    
+    { type: 'heading3' as const, data: { text: '列表' } },
+    { type: 'bulletList' as const, data: { text: '无序列表项 1' } },
+    { type: 'bulletList' as const, data: { text: '无序列表项 2' } },
+    { type: 'bulletList' as const, data: { text: '无序列表项 3' } },
+    
+    { type: 'numberedList' as const, data: { text: '有序列表项 1' } },
+    { type: 'numberedList' as const, data: { text: '有序列表项 2' } },
+    { type: 'numberedList' as const, data: { text: '有序列表项 3' } },
+    
+    { type: 'heading3' as const, data: { text: '待办事项' } },
+    { type: 'todoList' as const, data: { text: '已完成的任务', checked: true } },
+    { type: 'todoList' as const, data: { text: '进行中的任务', checked: false } },
+    { type: 'todoList' as const, data: { text: '待办任务', checked: false } },
+    
+    { type: 'heading3' as const, data: { text: '引用' } },
+    { type: 'quote' as const, data: { text: '这是一段引用文本。好的设计是尽可能少的设计。—— Dieter Rams' } },
+    
+    { type: 'heading3' as const, data: { text: '代码块' } },
+    { type: 'code' as const, data: { text: '// JavaScript 示例\nfunction greet(name) {\n  console.log(`Hello, ${name}!`);\n}\n\ngreet("Nexo");', language: 'javascript' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 嵌套结构演示 ==========
+    { type: 'heading2' as const, data: { text: '🌲 嵌套结构' } },
+    { type: 'paragraph' as const, data: { text: '使用 Tab 键可以创建嵌套块结构，支持无限层级嵌套。试试选中下面的块按 Tab：' } },
+    
+    { type: 'bulletList' as const, data: { text: '父级项目 A' } },
+    { type: 'bulletList' as const, data: { text: '可以按 Tab 变成子项' } },
+    { type: 'bulletList' as const, data: { text: '父级项目 B' } },
+    { type: 'bulletList' as const, data: { text: '另一个可嵌套的项' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 拖拽排序 ==========
+    { type: 'heading2' as const, data: { text: '🔀 拖拽排序' } },
+    { type: 'paragraph' as const, data: { text: '鼠标悬停在块左侧会显示拖拽手柄 ⋮⋮，拖动可以重新排列块的顺序。' } },
+    { type: 'paragraph' as const, data: { text: '多选块后拖拽，所有选中的块会一起移动。' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 斜杠命令 ==========
+    { type: 'heading2' as const, data: { text: '/ 斜杠命令' } },
+    { type: 'paragraph' as const, data: { text: '在空行输入 / 可以打开命令菜单，快速插入各种块类型。' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 架构特性 ==========
+    { type: 'heading2' as const, data: { text: '🏗️ 架构特性' } },
+    
+    { type: 'heading3' as const, data: { text: 'Model 层' } },
+    { type: 'bulletList' as const, data: { text: '树形块结构 (parentId / childrenIds)' } },
+    { type: 'bulletList' as const, data: { text: '富文本内容模型 (RichText[])' } },
+    { type: 'bulletList' as const, data: { text: 'Operation-based 变更系统' } },
+    { type: 'bulletList' as const, data: { text: '不可变数据结构' } },
+    
+    { type: 'heading3' as const, data: { text: 'Logic 层' } },
+    { type: 'bulletList' as const, data: { text: 'EditorController - 核心控制器' } },
+    { type: 'bulletList' as const, data: { text: 'CommandManager - 撤销/重做系统' } },
+    { type: 'bulletList' as const, data: { text: 'EventBus - 事件通信' } },
+    { type: 'bulletList' as const, data: { text: 'SelectionManager - 选区管理' } },
+    
+    { type: 'heading3' as const, data: { text: 'Renderer 层' } },
+    { type: 'bulletList' as const, data: { text: '虚拟 DOM (h / diff / patch)' } },
+    { type: 'bulletList' as const, data: { text: '增量更新 (只更新变化的部分)' } },
+    { type: 'bulletList' as const, data: { text: '块级懒加载 (50+ 块自动启用)' } },
+    { type: 'bulletList' as const, data: { text: '渲染缓存 (BlockRenderCache)' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 控制台调试 ==========
+    { type: 'heading2' as const, data: { text: '🔧 控制台调试' } },
+    { type: 'paragraph' as const, data: { text: '打开浏览器开发者工具，可以使用以下命令：' } },
+    { type: 'code' as const, data: { text: '// 查看文档结构\nnexo.controller.getDocument()\n\n// 查看所有块\nnexo.controller.getBlocks()\n\n// 创建测试块\nnexo.controller.createBlock("paragraph", { text: "测试" })\n\n// 测试懒加载（添加100个块）\nfor (let i = 0; i < 100; i++) {\n  nexo.controller.createBlock("paragraph", { text: `测试块 ${i+1}` })\n}\n\n// 启用懒加载调试模式\ndocument.querySelector(".nexo-editor").classList.add("nexo-lazy-debug")', language: 'javascript' } },
+    
+    { type: 'divider' as const, data: {} },
+    
+    // ========== 空白区域供输入 ==========
+    { type: 'heading2' as const, data: { text: '✍️ 开始编辑' } },
+    { type: 'paragraph' as const, data: { text: '在下方输入内容，或按 / 打开命令菜单...' } },
     { type: 'paragraph' as const, data: { text: '' } },
   ];
 
