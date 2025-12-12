@@ -1,0 +1,664 @@
+/**
+ * Nexo Block Editor - 样式系统
+ * 参考 Notion 设计，现代化块编辑器样式
+ */
+
+/* ============================================
+   CSS Variables - 设计令牌
+   ============================================ */
+:root {
+  /* 颜色系统 */
+  --nexo-bg-primary: #191919;
+  --nexo-bg-secondary: #252525;
+  --nexo-bg-tertiary: #2f2f2f;
+  --nexo-bg-hover: #373737;
+  --nexo-bg-active: #424242;
+  
+  --nexo-text-primary: #e3e3e3;
+  --nexo-text-secondary: #9b9b9b;
+  --nexo-text-muted: #6b6b6b;
+  --nexo-text-placeholder: #5a5a5a;
+  
+  --nexo-border-color: #383838;
+  --nexo-border-hover: #4a4a4a;
+  
+  --nexo-accent: #2383e2;
+  --nexo-accent-hover: #1a6fc4;
+  --nexo-accent-light: rgba(35, 131, 226, 0.15);
+  
+  --nexo-success: #3fb950;
+  --nexo-warning: #d29922;
+  --nexo-error: #f85149;
+  
+  /* 阴影 */
+  --nexo-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --nexo-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --nexo-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --nexo-shadow-menu: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 4px 16px rgba(0, 0, 0, 0.5);
+  
+  /* 排版 */
+  --nexo-font-sans: 'Söhne', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --nexo-font-mono: 'Söhne Mono', 'JetBrains Mono', 'Fira Code', monospace;
+  
+  --nexo-font-size-xs: 0.75rem;
+  --nexo-font-size-sm: 0.875rem;
+  --nexo-font-size-base: 1rem;
+  --nexo-font-size-lg: 1.125rem;
+  --nexo-font-size-xl: 1.25rem;
+  --nexo-font-size-2xl: 1.5rem;
+  --nexo-font-size-3xl: 2rem;
+  
+  --nexo-line-height-tight: 1.25;
+  --nexo-line-height-normal: 1.5;
+  --nexo-line-height-relaxed: 1.75;
+  
+  /* 间距 */
+  --nexo-spacing-xs: 0.25rem;
+  --nexo-spacing-sm: 0.5rem;
+  --nexo-spacing-md: 1rem;
+  --nexo-spacing-lg: 1.5rem;
+  --nexo-spacing-xl: 2rem;
+  
+  /* 圆角 */
+  --nexo-radius-sm: 4px;
+  --nexo-radius-md: 6px;
+  --nexo-radius-lg: 8px;
+  --nexo-radius-xl: 12px;
+  
+  /* 动画 */
+  --nexo-transition-fast: 100ms ease;
+  --nexo-transition-normal: 200ms ease;
+  --nexo-transition-slow: 300ms ease;
+  
+  /* 编辑器布局 */
+  --nexo-editor-max-width: 900px;
+  --nexo-editor-padding-x: 96px;
+  --nexo-block-padding-y: 3px;
+}
+
+/* 浅色主题 */
+[data-theme="light"] {
+  --nexo-bg-primary: #ffffff;
+  --nexo-bg-secondary: #f7f6f3;
+  --nexo-bg-tertiary: #eeeeee;
+  --nexo-bg-hover: #e8e8e8;
+  --nexo-bg-active: #dddddd;
+  
+  --nexo-text-primary: #37352f;
+  --nexo-text-secondary: #6b6b6b;
+  --nexo-text-muted: #9b9b9b;
+  --nexo-text-placeholder: #b4b4b4;
+  
+  --nexo-border-color: #e8e8e8;
+  --nexo-border-hover: #d8d8d8;
+  
+  --nexo-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --nexo-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --nexo-shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.15);
+  --nexo-shadow-menu: 0 0 0 1px rgba(0, 0, 0, 0.05), 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+/* ============================================
+   Reset & Base
+   ============================================ */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* ============================================
+   Editor Container
+   ============================================ */
+.nexo-editor {
+  font-family: var(--nexo-font-sans);
+  font-size: var(--nexo-font-size-base);
+  line-height: var(--nexo-line-height-relaxed);
+  color: var(--nexo-text-primary);
+  background: var(--nexo-bg-primary);
+  max-width: var(--nexo-editor-max-width);
+  margin: 0 auto;
+  padding: var(--nexo-spacing-xl) var(--nexo-editor-padding-x);
+  min-height: 100vh;
+  outline: none;
+}
+
+.nexo-editor:focus {
+  outline: none;
+}
+
+/* ============================================
+   Block Base Styles
+   ============================================ */
+.nexo-block {
+  position: relative;
+  padding: var(--nexo-block-padding-y) 0;
+  margin: 0;
+  border-radius: var(--nexo-radius-sm);
+  transition: background-color var(--nexo-transition-fast);
+}
+
+.nexo-block:hover {
+  background-color: var(--nexo-bg-hover);
+}
+
+.nexo-block-focused {
+  background-color: var(--nexo-accent-light);
+}
+
+.nexo-block-content {
+  outline: none;
+  word-break: break-word;
+  white-space: pre-wrap;
+  min-height: 1.5em;
+  padding: 0 var(--nexo-spacing-xs);
+}
+
+/* Placeholder */
+.nexo-block-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--nexo-text-placeholder);
+  pointer-events: none;
+  position: absolute;
+}
+
+/* ============================================
+   Drag Handle & Block Controls
+   ============================================ */
+/* 拖拽手柄由 DragHandle 插件提供 */
+
+.nexo-block-dragging {
+  opacity: 0.5;
+}
+
+/* Drop Indicator */
+.nexo-drop-indicator {
+  height: 3px;
+  background: var(--nexo-accent);
+  border-radius: 2px;
+  margin: 2px 0;
+  animation: nexo-pulse 1s ease-in-out infinite;
+}
+
+@keyframes nexo-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============================================
+   Paragraph
+   ============================================ */
+.nexo-block p {
+  margin: 0;
+  padding: 0;
+}
+
+/* ============================================
+   Headings
+   ============================================ */
+.nexo-block h1,
+.nexo-block h2,
+.nexo-block h3 {
+  margin: 0;
+  padding: 0;
+  font-weight: 600;
+  outline: none;
+}
+
+.nexo-block-heading1 {
+  margin-top: var(--nexo-spacing-xl);
+}
+
+.nexo-block-heading1 h1 {
+  font-size: var(--nexo-font-size-3xl);
+  line-height: var(--nexo-line-height-tight);
+  letter-spacing: -0.02em;
+}
+
+.nexo-block-heading2 {
+  margin-top: var(--nexo-spacing-lg);
+}
+
+.nexo-block-heading2 h2 {
+  font-size: var(--nexo-font-size-2xl);
+  line-height: var(--nexo-line-height-tight);
+  letter-spacing: -0.01em;
+}
+
+.nexo-block-heading3 {
+  margin-top: var(--nexo-spacing-md);
+}
+
+.nexo-block-heading3 h3 {
+  font-size: var(--nexo-font-size-xl);
+  line-height: var(--nexo-line-height-normal);
+}
+
+/* ============================================
+   Lists
+   ============================================ */
+.nexo-block-list {
+  padding-left: 0;
+}
+
+.nexo-list-container {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--nexo-spacing-sm);
+}
+
+.nexo-list-bullet,
+.nexo-list-number {
+  flex-shrink: 0;
+  width: 24px;
+  height: 1.75em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nexo-text-secondary);
+  font-size: var(--nexo-font-size-base);
+  user-select: none;
+}
+
+.nexo-list-bullet {
+  font-size: 1.5em;
+  line-height: 1;
+}
+
+.nexo-list-content {
+  flex: 1;
+  min-height: 1.75em;
+}
+
+/* Todo List */
+.nexo-todo-checkbox {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin-top: 4px;
+  margin-right: var(--nexo-spacing-sm);
+  cursor: pointer;
+  accent-color: var(--nexo-accent);
+  border-radius: var(--nexo-radius-sm);
+}
+
+.nexo-todo-checked {
+  text-decoration: line-through;
+  color: var(--nexo-text-muted);
+}
+
+/* ============================================
+   Quote
+   ============================================ */
+.nexo-block-quote {
+  padding-left: var(--nexo-spacing-sm);
+}
+
+.nexo-quote-container {
+  margin: 0;
+  padding: 0 0 0 var(--nexo-spacing-md);
+  border-left: 3px solid var(--nexo-border-color);
+  color: var(--nexo-text-secondary);
+  font-style: italic;
+}
+
+/* ============================================
+   Code Block
+   ============================================ */
+.nexo-block-code {
+  margin: var(--nexo-spacing-sm) 0;
+}
+
+.nexo-code-container {
+  background: var(--nexo-bg-secondary);
+  border-radius: var(--nexo-radius-md);
+  overflow: hidden;
+  border: 1px solid var(--nexo-border-color);
+}
+
+.nexo-code-language {
+  padding: var(--nexo-spacing-xs) var(--nexo-spacing-md);
+  font-size: var(--nexo-font-size-xs);
+  color: var(--nexo-text-muted);
+  background: var(--nexo-bg-tertiary);
+  border-bottom: 1px solid var(--nexo-border-color);
+  text-transform: lowercase;
+}
+
+.nexo-code-pre {
+  margin: 0;
+  padding: var(--nexo-spacing-md);
+  overflow-x: auto;
+}
+
+.nexo-code-content {
+  font-family: var(--nexo-font-mono);
+  font-size: var(--nexo-font-size-sm);
+  line-height: var(--nexo-line-height-relaxed);
+  color: var(--nexo-text-primary);
+  outline: none;
+  white-space: pre;
+  tab-size: 2;
+}
+
+.nexo-code-content:empty::before {
+  content: attr(data-placeholder);
+  color: var(--nexo-text-placeholder);
+}
+
+/* ============================================
+   Divider
+   ============================================ */
+.nexo-block-divider {
+  padding: var(--nexo-spacing-md) 0;
+  cursor: pointer;
+}
+
+.nexo-divider {
+  border: none;
+  height: 1px;
+  background: var(--nexo-border-color);
+  margin: 0;
+}
+
+.nexo-block-divider:focus .nexo-divider {
+  background: var(--nexo-accent);
+}
+
+/* ============================================
+   Image
+   ============================================ */
+.nexo-block-image {
+  padding: var(--nexo-spacing-sm) 0;
+}
+
+.nexo-image-container {
+  border-radius: var(--nexo-radius-md);
+  overflow: hidden;
+  max-width: 100%;
+}
+
+.nexo-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--nexo-radius-md);
+}
+
+.nexo-image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--nexo-spacing-sm);
+  padding: var(--nexo-spacing-xl);
+  background: var(--nexo-bg-secondary);
+  border: 2px dashed var(--nexo-border-color);
+  border-radius: var(--nexo-radius-md);
+  cursor: pointer;
+  transition: all var(--nexo-transition-normal);
+}
+
+.nexo-image-placeholder:hover {
+  background: var(--nexo-bg-tertiary);
+  border-color: var(--nexo-accent);
+}
+
+.nexo-image-icon {
+  color: var(--nexo-text-muted);
+}
+
+.nexo-image-text {
+  font-size: var(--nexo-font-size-sm);
+  color: var(--nexo-text-secondary);
+}
+
+/* ============================================
+   Slash Menu
+   ============================================ */
+.nexo-slash-menu {
+  position: fixed;
+  z-index: 1000;
+  min-width: 320px;
+  max-width: 400px;
+  max-height: 380px;
+  background: var(--nexo-bg-secondary);
+  border-radius: var(--nexo-radius-lg);
+  box-shadow: var(--nexo-shadow-menu);
+  border: 1px solid var(--nexo-border-color);
+  overflow: hidden;
+  animation: nexo-menu-enter 150ms ease-out;
+}
+
+@keyframes nexo-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.nexo-slash-menu-header {
+  padding: var(--nexo-spacing-sm) var(--nexo-spacing-md);
+  border-bottom: 1px solid var(--nexo-border-color);
+}
+
+.nexo-slash-menu-title {
+  font-size: var(--nexo-font-size-xs);
+  font-weight: 500;
+  color: var(--nexo-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.nexo-slash-menu-items {
+  padding: var(--nexo-spacing-xs);
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.nexo-slash-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--nexo-spacing-md);
+  padding: var(--nexo-spacing-sm) var(--nexo-spacing-md);
+  border-radius: var(--nexo-radius-md);
+  cursor: pointer;
+  transition: background-color var(--nexo-transition-fast);
+}
+
+.nexo-slash-menu-item:hover,
+.nexo-slash-menu-item.selected {
+  background: var(--nexo-bg-hover);
+}
+
+.nexo-slash-menu-item-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--nexo-bg-tertiary);
+  border-radius: var(--nexo-radius-md);
+  color: var(--nexo-text-secondary);
+  border: 1px solid var(--nexo-border-color);
+}
+
+.nexo-slash-menu-item-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.nexo-slash-menu-item-label {
+  font-size: var(--nexo-font-size-sm);
+  font-weight: 500;
+  color: var(--nexo-text-primary);
+}
+
+.nexo-slash-menu-item-description {
+  font-size: var(--nexo-font-size-xs);
+  color: var(--nexo-text-muted);
+  margin-top: 2px;
+}
+
+.nexo-slash-menu-empty {
+  padding: var(--nexo-spacing-lg);
+  text-align: center;
+  color: var(--nexo-text-muted);
+  font-size: var(--nexo-font-size-sm);
+}
+
+/* ============================================
+   Toolbar
+   ============================================ */
+.nexo-toolbar {
+  position: fixed;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: var(--nexo-spacing-xs);
+  background: var(--nexo-bg-secondary);
+  border-radius: var(--nexo-radius-lg);
+  box-shadow: var(--nexo-shadow-menu);
+  border: 1px solid var(--nexo-border-color);
+  animation: nexo-toolbar-enter 150ms ease-out;
+}
+
+@keyframes nexo-toolbar-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.nexo-toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: var(--nexo-radius-sm);
+  color: var(--nexo-text-secondary);
+  cursor: pointer;
+  transition: all var(--nexo-transition-fast);
+}
+
+.nexo-toolbar-button:hover {
+  background: var(--nexo-bg-hover);
+  color: var(--nexo-text-primary);
+}
+
+.nexo-toolbar-button.active {
+  background: var(--nexo-accent-light);
+  color: var(--nexo-accent);
+}
+
+.nexo-toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background: var(--nexo-border-color);
+  margin: 0 var(--nexo-spacing-xs);
+}
+
+/* ============================================
+   Selection Highlight
+   ============================================ */
+.nexo-editor ::selection {
+  background: var(--nexo-accent-light);
+}
+
+/* ============================================
+   Scrollbar
+   ============================================ */
+.nexo-editor::-webkit-scrollbar,
+.nexo-slash-menu-items::-webkit-scrollbar,
+.nexo-code-pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.nexo-editor::-webkit-scrollbar-track,
+.nexo-slash-menu-items::-webkit-scrollbar-track,
+.nexo-code-pre::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nexo-editor::-webkit-scrollbar-thumb,
+.nexo-slash-menu-items::-webkit-scrollbar-thumb,
+.nexo-code-pre::-webkit-scrollbar-thumb {
+  background: var(--nexo-border-color);
+  border-radius: 4px;
+}
+
+.nexo-editor::-webkit-scrollbar-thumb:hover,
+.nexo-slash-menu-items::-webkit-scrollbar-thumb:hover,
+.nexo-code-pre::-webkit-scrollbar-thumb:hover {
+  background: var(--nexo-border-hover);
+}
+
+/* ============================================
+   Page Header (Title)
+   ============================================ */
+.nexo-page-header {
+  margin-bottom: var(--nexo-spacing-xl);
+}
+
+.nexo-page-icon {
+  font-size: 4rem;
+  line-height: 1;
+  margin-bottom: var(--nexo-spacing-md);
+  cursor: pointer;
+  display: inline-block;
+  transition: transform var(--nexo-transition-fast);
+}
+
+.nexo-page-icon:hover {
+  transform: scale(1.1);
+}
+
+.nexo-page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--nexo-text-primary);
+  outline: none;
+  border: none;
+  background: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+.nexo-page-title:empty::before {
+  content: 'Untitled';
+  color: var(--nexo-text-placeholder);
+}
+
+/* ============================================
+   Responsive
+   ============================================ */
+@media (max-width: 768px) {
+  :root {
+    --nexo-editor-padding-x: 24px;
+  }
+  
+  .nexo-block::before {
+    left: -24px;
+  }
+  
+  .nexo-slash-menu {
+    min-width: 280px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
