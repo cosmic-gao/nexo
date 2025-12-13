@@ -2,7 +2,7 @@
  * Renderer Layer - VDOMCompiler
  * 基于虚拟 DOM 的编译器实现
  * 使用 diff + patch 实现增量更新
- * 支持块级懒加载优化大文档性能
+ * 支持虚拟滚动优化大文档性能
  */
 
 import type { Block, Document, BlockType } from '../../model/types';
@@ -16,17 +16,15 @@ import { DOMSelectionAdapter } from './DOMSelectionAdapter';
 import { detectMarkdownShortcut, extractCodeLanguage } from './MarkdownShortcuts';
 import { DirtyTracker } from '../vdom/DirtyTracker';
 import { BlockRenderCache } from '../vdom/MemoizedBlock';
-import { LazyBlockManager, type VisibleRange, type LazyBlockConfig } from '../vdom/LazyBlock';
+import { VirtualScrollManager, type VirtualScrollState, type VirtualScrollConfig } from '../vdom/VirtualScroll';
 import { extractTextFromElement } from './textUtils';
 
 /**
  * VDOMCompiler 配置
  */
 export interface VDOMCompilerOptions {
-  /** 懒加载配置 */
-  lazyLoading?: Partial<LazyBlockConfig>;
-  /** 是否启用懒加载（默认：文档超过 50 个块时启用） */
-  lazyLoadingThreshold?: number;
+  /** 虚拟滚动配置 */
+  virtualScroll?: Partial<VirtualScrollConfig>;
 }
 
 /**
@@ -58,17 +56,13 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
   private selectionAnchorBlockId: string | null = null;
   private isMouseSelecting: boolean = false;
 
-  // 懒加载
-  private lazyManager: LazyBlockManager | null = null;
-  private visibleRange: VisibleRange | null = null;
+  // 虚拟滚动
+  private virtualScroll: VirtualScrollManager | null = null;
+  private scrollState: VirtualScrollState | null = null;
   private options: VDOMCompilerOptions;
-  private flatBlockIds: string[] = []; // 缓存扁平化的块 ID 列表
 
   constructor(options: VDOMCompilerOptions = {}) {
-    this.options = {
-      lazyLoadingThreshold: 50,
-      ...options,
-    };
+    this.options = options;
   }
 
   /**
@@ -85,7 +79,7 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     container.setAttribute('aria-multiline', 'true');
     
     this.bindEvents();
-    this.initLazyLoading(container);
+    this.initVirtualScroll(container);
     
     // 监听文档变化
     controller.on('document:changed', () => {
@@ -101,44 +95,36 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     // 撤销/重做时强制完整重新渲染
     controller.on('command:undone', () => {
       this.renderCache.clear();
-      this.lazyManager?.clearMeasurements();
+      this.virtualScroll?.clearCache();
       this.isFirstRender = true;
     });
 
     controller.on('command:redone', () => {
       this.renderCache.clear();
-      this.lazyManager?.clearMeasurements();
+      this.virtualScroll?.clearCache();
       this.isFirstRender = true;
     });
   }
 
   /**
-   * 初始化懒加载
+   * 初始化虚拟滚动
    */
-  private initLazyLoading(container: HTMLElement): void {
-    this.lazyManager = new LazyBlockManager({
-      bufferSize: 5,
-      estimatedBlockHeight: 40,
-      enabled: false, // 初始禁用，根据文档大小动态启用
-      ...this.options.lazyLoading,
+  private initVirtualScroll(container: HTMLElement): void {
+    this.virtualScroll = new VirtualScrollManager({
+      overscan: 10,
+      estimatedHeight: 36,
+      threshold: 100,
+      ...this.options.virtualScroll,
     });
 
-    this.lazyManager.init(container, () => {
-      // 可视范围变化时重新渲染
+    this.virtualScroll.init(container, () => {
+      // 滚动时重新渲染
       this.scheduleRender();
     });
   }
 
   /**
-   * 检查是否应该启用懒加载
-   */
-  private shouldEnableLazyLoading(blockCount: number): boolean {
-    const threshold = this.options.lazyLoadingThreshold ?? 50;
-    return blockCount >= threshold;
-  }
-
-  /**
-   * 获取扁平化的块 ID 列表
+   * 获取扁平化的块 ID 列表（用于多块选择等功能）
    */
   private getFlatBlockIds(doc: Document): string[] {
     const result: string[] = [];
@@ -204,20 +190,9 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     const savedSelection = this.selectionAdapter?.syncFromPlatform();
     const activeBlockId = this.focusedBlockId;
 
-    // 更新扁平化块 ID 列表
-    this.flatBlockIds = this.getFlatBlockIds(doc);
-    
-    // 动态启用/禁用懒加载
-    const enableLazy = this.shouldEnableLazyLoading(this.flatBlockIds.length);
-    if (this.lazyManager) {
-      this.lazyManager.setConfig({ enabled: enableLazy });
-      
-      // 计算可视范围
-      if (enableLazy) {
-        this.visibleRange = this.lazyManager.calculateVisibleRange(this.flatBlockIds);
-      } else {
-        this.visibleRange = null;
-      }
+    // 计算虚拟滚动状态
+    if (this.virtualScroll) {
+      this.scrollState = this.virtualScroll.calculate(doc.rootIds);
     }
 
     // 构建虚拟 DOM 树
@@ -242,9 +217,9 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
     // 更新块元素映射
     this.updateBlockElementsMap();
     
-    // 更新懒加载测量
-    if (this.lazyManager && enableLazy) {
-      this.lazyManager.measureBlocks(this.blockElements);
+    // 更新虚拟滚动高度缓存
+    if (this.virtualScroll && this.scrollState && this.scrollState.totalHeight > 0) {
+      this.virtualScroll.measureRenderedBlocks(this.blockElements);
     }
     
     // 清除脏标记
@@ -267,70 +242,37 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
    * 构建虚拟 DOM 树
    */
   private buildVirtualTree(doc: Document): VNode {
-    const children: VNode[] = [];
-    const useLazyLoading = this.visibleRange && this.lazyManager?.isEnabled();
+    const useVirtualScroll = this.scrollState && this.scrollState.totalHeight > 0;
 
-    // 暂时禁用懒加载，直接渲染所有块
-    // TODO: 修复懒加载逻辑后重新启用
-    const lazyLoadingEnabled = false;
-    if (lazyLoadingEnabled && useLazyLoading && this.visibleRange) {
-      // 懒加载模式：只渲染可视范围内的根块
-      // 需要找出哪些根块在可视范围内
-      const { startIndex, endIndex } = this.visibleRange;
+    if (useVirtualScroll && this.scrollState) {
+      // 虚拟滚动模式
+      const { startIndex, endIndex, totalHeight, offsetY } = this.scrollState;
+      const visibleChildren: VNode[] = [];
       
-      // 构建可视范围内的 blockId 集合（包括子块）
-      const visibleBlockIds = new Set<string>();
-      for (let i = startIndex; i <= endIndex && i < this.flatBlockIds.length; i++) {
-        visibleBlockIds.add(this.flatBlockIds[i]);
-      }
-      
-      // 找出需要渲染的根块：如果根块本身或其任意后代在可视范围内
-      const visibleRootBlockIds: string[] = [];
-      let firstVisibleRootIndex = -1;
-      for (let i = 0; i < doc.rootIds.length; i++) {
-        const rootId = doc.rootIds[i];
-        if (this.isBlockOrDescendantVisible(rootId, doc, visibleBlockIds)) {
-          if (firstVisibleRootIndex === -1) {
-            firstVisibleRootIndex = i;
-          }
-          visibleRootBlockIds.push(rootId);
+      // 只渲染可视范围内的根块
+      for (let i = startIndex; i <= endIndex && i < doc.rootIds.length; i++) {
+        const blockId = doc.rootIds[i];
+        const block = doc.blocks[blockId];
+        if (block) {
+          const blockVNode = this.buildBlockVNode(block, doc, 0, i);
+          visibleChildren.push(blockVNode);
         }
       }
-      
-      // 如果没有可视块，渲染所有块
-      if (firstVisibleRootIndex === -1) {
-        doc.rootIds.forEach((blockId, index) => {
-          const block = doc.blocks[blockId];
-          if (block) {
-            const blockVNode = this.buildBlockVNode(block, doc, 0, index);
-            children.push(blockVNode);
-          }
-        });
-      } else {
-        // 计算上方占位符高度（基于根块）
-        const topHeight = this.calculateRootBlocksHeight(doc, 0, firstVisibleRootIndex);
-        if (topHeight > 0) {
-          children.push(this.createPlaceholder('top', topHeight));
-        }
 
-        // 渲染可视范围内的根块
-        visibleRootBlockIds.forEach((blockId, index) => {
-          const block = doc.blocks[blockId];
-          if (block) {
-            const blockVNode = this.buildBlockVNode(block, doc, 0, index);
-            children.push(blockVNode);
-          }
-        });
+      // 使用固定容器高度 + transform 定位的方式
+      // 这样可以避免滚动时的抖动
+      const innerContent = h('div', {
+        className: 'nexo-virtual-content',
+        style: `transform: translateY(${offsetY}px);`,
+      }, ...visibleChildren);
 
-        // 计算下方占位符高度（基于根块）
-        const lastVisibleRootIndex = firstVisibleRootIndex + visibleRootBlockIds.length;
-        const bottomHeight = this.calculateRootBlocksHeight(doc, lastVisibleRootIndex, doc.rootIds.length);
-        if (bottomHeight > 0) {
-          children.push(this.createPlaceholder('bottom', bottomHeight));
-        }
-      }
+      return h('div', {
+        className: 'nexo-blocks-container nexo-virtual-scroll',
+        style: `height: ${totalHeight}px; position: relative;`,
+      }, innerContent);
     } else {
       // 普通模式：渲染所有块
+      const children: VNode[] = [];
       doc.rootIds.forEach((blockId, index) => {
         const block = doc.blocks[blockId];
         if (block) {
@@ -338,74 +280,8 @@ export class VDOMCompiler implements Compiler<HTMLElement, HTMLElement> {
           children.push(blockVNode);
         }
       });
+      return h('div', { className: 'nexo-blocks-container' }, ...children);
     }
-
-    return h('div', { className: 'nexo-blocks-container' }, ...children);
-  }
-  
-  /**
-   * 检查块或其后代是否在可视范围内
-   */
-  private isBlockOrDescendantVisible(blockId: string, doc: Document, visibleBlockIds: Set<string>): boolean {
-    if (visibleBlockIds.has(blockId)) {
-      return true;
-    }
-    
-    const block = doc.blocks[blockId];
-    if (block && block.childrenIds.length > 0) {
-      for (const childId of block.childrenIds) {
-        if (this.isBlockOrDescendantVisible(childId, doc, visibleBlockIds)) {
-          return true;
-        }
-      }
-    }
-    
-    return false;
-  }
-
-  /**
-   * 创建占位符
-   */
-  private createPlaceholder(position: 'top' | 'bottom', height: number): VNode {
-    return h('div', {
-      className: `nexo-lazy-placeholder nexo-lazy-placeholder-${position}`,
-      style: `height: ${height}px; pointer-events: none;`,
-      'data-placeholder': position,
-      key: `placeholder-${position}`,
-    });
-  }
-
-  /**
-   * 计算根块范围的高度（包含子块）
-   */
-  private calculateRootBlocksHeight(doc: Document, startRootIndex: number, endRootIndex: number): number {
-    let height = 0;
-    for (let i = startRootIndex; i < endRootIndex && i < doc.rootIds.length; i++) {
-      const rootId = doc.rootIds[i];
-      height += this.calculateBlockTreeHeight(rootId, doc);
-    }
-    return height;
-  }
-  
-  /**
-   * 计算单个块及其子块的总高度
-   */
-  private calculateBlockTreeHeight(blockId: string, doc: Document): number {
-    const element = this.blockElements.get(blockId);
-    if (element) {
-      // 如果有 DOM 元素，直接使用其高度（包含子块）
-      return element.offsetHeight;
-    }
-    
-    // 没有 DOM 元素时，递归计算估计高度
-    const block = doc.blocks[blockId];
-    if (!block) return 40;
-    
-    let height = 40; // 块本身的估计高度
-    for (const childId of block.childrenIds) {
-      height += this.calculateBlockTreeHeight(childId, doc);
-    }
-    return height;
   }
 
   /**

@@ -5,6 +5,8 @@
 /**
  * 从 DOM 元素中提取文本，正确处理 <br> 为换行符
  * 这比 innerText 更可靠，避免换行符累积问题
+ * 
+ * 注意：contenteditable 中最后一个 <br> 通常是占位符，不代表实际换行
  */
 export function extractTextFromElement(element: HTMLElement): string {
   const parts: string[] = [];
@@ -39,7 +41,28 @@ export function extractTextFromElement(element: HTMLElement): string {
   
   walk(element);
   
-  // 合并并清理末尾换行
-  return parts.join('').replace(/\n+$/, '');
+  let result = parts.join('');
+  
+  // 处理末尾的换行符
+  // 1. 如果最后一个子节点是 <br>，这通常是浏览器的占位符，移除最后一个换行
+  // 2. 如果末尾有由块级元素添加的换行，也移除
+  if (result.endsWith('\n')) {
+    const lastChild = element.lastChild;
+    if (lastChild) {
+      // 检查最后一个元素是否是 BR（占位符）
+      if (lastChild.nodeName === 'BR') {
+        result = result.slice(0, -1);
+      }
+      // 或者是块级元素添加的换行
+      else if (lastChild.nodeType === Node.ELEMENT_NODE) {
+        const tagName = (lastChild as HTMLElement).tagName?.toLowerCase();
+        if (['div', 'p'].includes(tagName)) {
+          result = result.slice(0, -1);
+        }
+      }
+    }
+  }
+  
+  return result;
 }
 

@@ -16,8 +16,8 @@ export interface LazyBlockConfig {
 }
 
 export const defaultLazyConfig: LazyBlockConfig = {
-  bufferSize: 5,
-  estimatedBlockHeight: 40,
+  bufferSize: 8, // 增加缓冲区，减少滚动时的闪烁
+  estimatedBlockHeight: 32, // 与 VDOMCompiler 中的估计高度一致
   enabled: true,
 };
 
@@ -59,17 +59,17 @@ export class LazyBlockManager {
     this.container = container;
     this.onVisibleRangeChange = onVisibleRangeChange;
 
-    // 监听滚动
+    // 监听滚动 - 使用更长的节流时间避免频繁渲染
     this.scrollHandler = this.throttle(() => {
       this.updateVisibleRange();
-    }, 16);
+    }, 100); // 增加节流时间到 100ms，减少重绘频率
     window.addEventListener('scroll', this.scrollHandler, { passive: true });
     container.addEventListener('scroll', this.scrollHandler, { passive: true });
 
     // 监听尺寸变化
-    this.resizeObserver = new ResizeObserver(() => {
+    this.resizeObserver = new ResizeObserver(this.debounce(() => {
       this.updateVisibleRange();
-    });
+    }, 150));
     this.resizeObserver.observe(container);
   }
 
@@ -127,12 +127,34 @@ export class LazyBlockManager {
     }
 
     const containerRect = this.container.getBoundingClientRect();
-    const scrollTop = this.container.scrollTop || window.scrollY;
-    const viewportTop = scrollTop;
-    const viewportBottom = scrollTop + containerRect.height;
+    
+    // 判断滚动发生在容器内还是窗口上
+    const hasContainerScroll = this.container.scrollHeight > this.container.clientHeight;
+    const scrollTop = hasContainerScroll ? this.container.scrollTop : window.scrollY;
+    
+    // 计算相对于容器的可视区域
+    // 如果滚动在窗口上，需要考虑容器相对于窗口的位置
+    let viewportTop: number;
+    let viewportHeight: number;
+    
+    if (hasContainerScroll) {
+      // 容器内滚动
+      viewportTop = scrollTop;
+      viewportHeight = this.container.clientHeight;
+    } else {
+      // 窗口滚动：计算容器在视口中的可见区域
+      viewportTop = Math.max(0, -containerRect.top);
+      viewportHeight = Math.min(
+        window.innerHeight,
+        containerRect.bottom
+      ) - Math.max(0, containerRect.top);
+      viewportHeight = Math.max(0, viewportHeight);
+    }
+    
+    const viewportBottom = viewportTop + viewportHeight;
 
     let startIndex = -1; // 使用 -1 表示尚未找到
-    let endIndex = blockIds.length - 1;
+    let endIndex = -1; // 初始化为 -1，只在找到第一个可视块后才开始追踪
     let totalHeight = 0;
     let offsetTop = 0;
     let accumulatedHeight = 0;
@@ -152,17 +174,34 @@ export class LazyBlockManager {
         offsetTop = this.getAccumulatedHeight(blockIds, 0, startIndex);
       }
 
-      // 找到最后一个可视块
-      if (blockTop <= viewportBottom) {
-        endIndex = Math.min(blockIds.length - 1, i + this.config.bufferSize);
+      // 更新最后一个可视块（当块在可视区域内或与之重叠时）
+      if (startIndex !== -1 && blockTop <= viewportBottom) {
+        endIndex = i;
+      }
+
+      // 如果已经找到开始且当前块超出可视区域底部，可以提前终止
+      if (startIndex !== -1 && blockTop > viewportBottom) {
+        break;
       }
 
       accumulatedHeight += blockHeight;
+    }
+    
+    // 计算剩余块的高度（如果提前终止）
+    if (accumulatedHeight < blockIds.length * this.config.estimatedBlockHeight) {
+      for (let i = endIndex + 1; i < blockIds.length; i++) {
+        const measurement = this.measurements.get(blockIds[i]);
+        accumulatedHeight += measurement?.height || this.config.estimatedBlockHeight;
+      }
     }
 
     // 如果没有找到可视块，默认显示开头
     if (startIndex === -1) {
       startIndex = 0;
+      endIndex = Math.min(this.config.bufferSize * 2, blockIds.length - 1);
+    } else {
+      // 添加缓冲区
+      endIndex = Math.min(blockIds.length - 1, endIndex + this.config.bufferSize);
     }
 
     totalHeight = accumulatedHeight;
@@ -204,6 +243,7 @@ export class LazyBlockManager {
   private throttle(fn: () => void, delay: number): () => void {
     let lastCall = 0;
     let timeoutId: number | null = null;
+    let rafId: number | null = null;
 
     return () => {
       const now = Date.now();
@@ -214,15 +254,42 @@ export class LazyBlockManager {
           clearTimeout(timeoutId);
           timeoutId = null;
         }
+        if (rafId) {
+          cancelAnimationFrame(rafId);
+        }
         lastCall = now;
-        fn();
+        // 使用 RAF 确保在渲染帧执行
+        rafId = requestAnimationFrame(() => {
+          fn();
+          rafId = null;
+        });
       } else if (!timeoutId) {
         timeoutId = window.setTimeout(() => {
           lastCall = Date.now();
           timeoutId = null;
-          fn();
+          rafId = requestAnimationFrame(() => {
+            fn();
+            rafId = null;
+          });
         }, remaining);
       }
+    };
+  }
+
+  /**
+   * 防抖函数
+   */
+  private debounce(fn: () => void, delay: number): () => void {
+    let timeoutId: number | null = null;
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = window.setTimeout(() => {
+        fn();
+        timeoutId = null;
+      }, delay);
     };
   }
 

@@ -828,3 +828,30 @@
   }
 }
 
+/* ============================================
+   虚拟滚动
+   ============================================ */
+
+/* 编辑器滚动容器 */
+.nexo-editor.nexo-vdom {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 普通模式的块容器 */
+.nexo-blocks-container {
+  contain: layout style;
+}
+
+/* 虚拟滚动模式的块容器 */
+.nexo-blocks-container.nexo-virtual-scroll {
+  contain: strict;
+  overflow: hidden;
+}
+
+/* 虚拟滚动内容容器 */
+.nexo-virtual-content {
+  will-change: transform;
+  contain: layout style;
+}
+
